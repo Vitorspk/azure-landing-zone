@@ -1,0 +1,21 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# Azure
+.azure/
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+
+# Secrets
+*.secret
+secrets/
+credentials/

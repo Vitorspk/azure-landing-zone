@@ -1,0 +1,48 @@
+# Azure Subscription Configuration
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Resource Group (created in 00-iam module)
+resource_group_name = "rg-network"
+
+# Virtual Network Configuration
+vnet_name          = "vnet-shared-network"
+vnet_address_space = "172.31.0.0/16"
+
+# Subnet Configuration
+subnet_configs = {
+  dev = {
+    name              = "dev-subnet"
+    address_prefix    = "172.31.0.0/20"
+    service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
+  }
+  stg = {
+    name              = "stg-subnet"
+    address_prefix    = "172.31.16.0/20"
+    service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
+  }
+  prd = {
+    name              = "prd-subnet"
+    address_prefix    = "172.31.32.0/20"
+    service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.AzureCosmosDB"]
+  }
+  sdx = {
+    name              = "sdx-subnet"
+    address_prefix    = "172.31.48.0/20"
+    service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.EventHub"]
+  }
+}
+
+# Network Security Group
+nsg_name = "nsg-allow-ssh"
+
+# NAT Gateway
+nat_gateway_name     = "nat-gateway-shared"
+nat_gateway_pip_name = "pip-nat-gateway-shared"
+
+# Tags
+tags = {
+  Project     = "azure-landing-zone"
+  ManagedBy   = "terraform"
+  Environment = "shared"
+  CostCenter  = "infrastructure"
+}

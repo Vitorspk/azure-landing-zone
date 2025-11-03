@@ -1,0 +1,58 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to deploy'
+        required: true
+        type: choice
+        options:
+          - 'all'
+          - '00-iam'
+          - '01-networking'
+          - '02-kubernetes'
+      action:
+        description: 'Action'
+        required: true
+        type: choice
+        options:
+          - 'plan'
+          - 'apply'
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Module
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          if [ "${{ github.event.inputs.module }}" == "all" ]; then
+            for module in 00-iam 01-networking 02-kubernetes; do
+              cd terraform/$module
+              terraform init
+              terraform ${{ github.event.inputs.action }}
+              cd ../..
+            done
+          else
+            cd terraform/${{ github.event.inputs.module }}
+            terraform init
+            terraform ${{ github.event.inputs.action }}
+          fi

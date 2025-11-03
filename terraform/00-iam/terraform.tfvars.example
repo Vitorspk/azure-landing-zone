@@ -1,0 +1,23 @@
+# Azure Subscription and Tenant Configuration
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Resource Group Configuration
+resource_group_name = "rg-network"
+location            = "brazilsouth" # or "eastus"
+
+# Project Configuration
+project_name = "azure-landing-zone"
+environment  = "shared"
+
+# Identity Configuration
+create_service_principal = false # Set to true if you need a Service Principal for automation
+create_aks_identity      = true  # Create Managed Identities for AKS clusters
+
+# Tags
+tags = {
+  Project     = "azure-landing-zone"
+  ManagedBy   = "terraform"
+  Environment = "shared"
+  CostCenter  = "infrastructure"
+}
