@@ -28,8 +28,8 @@ resource "azuread_application" "terraform" {
 
 # Service Principal for the Application
 resource "azuread_service_principal" "terraform" {
-  count          = var.create_service_principal ? 1 : 0
-  client_id      = azuread_application.terraform[0].client_id
+  count                        = var.create_service_principal ? 1 : 0
+  client_id                    = azuread_application.terraform[0].client_id
   app_role_assignment_required = false
 
   owners = [data.azuread_client_config.current.object_id]
@@ -99,7 +99,7 @@ resource "azurerm_user_assigned_identity" "aks_env" {
   name                = "mi-aks-${each.key}"
   resource_group_name = azurerm_resource_group.iam.name
   location            = azurerm_resource_group.iam.location
-  
+
   tags = merge(var.tags, {
     Environment = each.key
   })

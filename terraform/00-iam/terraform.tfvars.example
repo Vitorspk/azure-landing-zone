@@ -1,6 +1,6 @@
 # Azure Subscription and Tenant Configuration
-subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+subscription_id = "35a5288e-6993-4afa-97a9-2862baaf944e"
+tenant_id       = "58729694-7d24-4182-94ef-60f4c02329e3"
 
 # Resource Group Configuration
 resource_group_name = "rg-network"

@@ -1,4 +1,4 @@
-subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+subscription_id = "35a5288e-6993-4afa-97a9-2862baaf944e"
 
 resource_group_name = "rg-network"
 vnet_name           = "vnet-shared-network"

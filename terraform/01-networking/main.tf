@@ -135,8 +135,8 @@ resource "azurerm_nat_gateway" "shared" {
   resource_group_name     = data.azurerm_resource_group.network.name
   sku_name                = "Standard"
   idle_timeout_in_minutes = 4
-  zones                   = ["1", "2", "3"]
-  tags                    = var.tags
+  # NAT Gateway doesn't support multiple zones - it's automatically zone-redundant when zones is not specified
+  tags = var.tags
 }
 
 # Associate Public IP with NAT Gateway

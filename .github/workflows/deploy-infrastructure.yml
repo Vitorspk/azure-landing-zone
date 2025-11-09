@@ -19,6 +19,19 @@ on:
         options:
           - 'plan'
           - 'apply'
+      clusters:
+        description: 'Which clusters to deploy (for kubernetes module only)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'dev'
+          - 'stg'
+          - 'prd'
+          - 'sdx'
+          - 'dev,stg'
+          - 'dev,stg,prd'
 
 jobs:
   deploy:
@@ -45,14 +58,66 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           if [ "${{ github.event.inputs.module }}" == "all" ]; then
+            # Deploy all modules sequentially
             for module in 00-iam 01-networking 02-kubernetes; do
+              echo "========================================"
+              echo "Deploying module: $module"
+              echo "========================================"
               cd terraform/$module
               terraform init
-              terraform ${{ github.event.inputs.action }}
+              
+              if [ "$module" == "02-kubernetes" ]; then
+                # For kubernetes module, pass deploy_clusters variable
+                echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
+                terraform ${{ github.event.inputs.action }} -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+              else
+                terraform ${{ github.event.inputs.action }}
+              fi
+              
               cd ../..
             done
           else
+            # Deploy single module
+            echo "========================================"
+            echo "Deploying module: ${{ github.event.inputs.module }}"
+            echo "========================================"
             cd terraform/${{ github.event.inputs.module }}
             terraform init
-            terraform ${{ github.event.inputs.action }}
+            
+            if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+              # For kubernetes module, pass deploy_clusters variable
+              echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
+              terraform ${{ github.event.inputs.action }} -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+            else
+              terraform ${{ github.event.inputs.action }}
+            fi
           fi
+      
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "📊 Deployment Summary"
+          echo "=========================================="
+          echo ""
+          echo "Module: ${{ github.event.inputs.module }}"
+          echo "Action: ${{ github.event.inputs.action }}"
+          echo "Clusters: ${{ github.event.inputs.clusters }}"
+          echo ""
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            if [ "${{ github.event.inputs.action }}" == "plan" ]; then
+              echo "✅ Planning completed successfully!"
+              echo ""
+              echo "Review the plan above. If OK:"
+              echo "  Run workflow again with action: apply"
+            else
+              echo "✅ Infrastructure deployment completed successfully!"
+              echo ""
+              echo "Resources are now live in Azure."
+            fi
+          else
+            echo "❌ Deployment failed. Check logs above."
+          fi
+          echo ""

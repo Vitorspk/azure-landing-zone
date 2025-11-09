@@ -9,11 +9,12 @@ This landing zone provides a complete foundation for running containerized workl
 ## Architecture Highlights
 
 - **Multi-environment support**: DEV, STG, PRD, and SDX environments with isolated subnets
+- **Selective cluster deployment**: Deploy only the clusters you need (dev, stg, prd, sdx, or any combination)
 - **Network security**: NSGs, NAT Gateway for egress traffic, and private cluster support for production
 - **Identity management**: Managed identities for AKS workloads with proper RBAC assignments
-- **Kubernetes-ready**: 4 AKS clusters (v1.30) with Azure CNI, network policies, and auto-scaling
-- **GitOps-ready**: GitHub Actions workflows for automated validation and deployment
-- **Cost-optimized**: Estimated $350-650/month with configurable VM sizes per environment
+- **Kubernetes-ready**: 4 AKS clusters (v1.31) with Azure CNI, network policies, and auto-scaling
+- **GitOps-ready**: GitHub Actions workflows for automated validation and deployment with cluster selection
+- **Cost-optimized**: Estimated $90-650/month depending on which clusters you deploy
 
 ## Project Structure
 
@@ -21,8 +22,10 @@ This landing zone provides a complete foundation for running containerized workl
 azure-landing-zone/
 ├── .github/
 │   └── workflows/           # CI/CD pipelines
-│       ├── terraform-validate.yml
-│       └── deploy-infrastructure.yml
+│       ├── terraform-validate.yml        # Terraform validation
+│       ├── deploy-infrastructure.yml     # Core infrastructure
+│       ├── deploy-ingress-nginx.yml      # Ingress deployment
+│       └── destroy-ingress-nginx.yml     # Ingress cleanup
 │
 ├── terraform/
 │   ├── 00-iam/             # Identity & Access Management
@@ -44,10 +47,12 @@ azure-landing-zone/
 │           └── aks-cluster/  # Reusable AKS module
 │
 ├── manifests/              # Kubernetes manifests
-│   ├── ingress-nginx-external.yaml
-│   └── ingress-nginx-internal.yaml
+│   ├── aks-ingress-nginx-1.13.3-external.yaml
+│   ├── aks-ingress-nginx-1.13.3-internal.yaml
+│   └── README.md
 │
 ├── scripts/                # Helper scripts
+│   ├── deploy-ingress-controllers.sh
 │   ├── format-terraform.sh
 │   ├── pre-deployment-check.sh
 │   └── get-kubeconfig.sh
@@ -56,6 +61,8 @@ azure-landing-zone/
 │   ├── ARCHITECTURE.md     # Detailed architecture diagrams
 │   ├── DEPLOYMENT.md       # Step-by-step deployment guide
 │   ├── GITHUB_SECRETS.md   # CI/CD configuration
+│   ├── NETWORK-RANGE-FIX.md  # Network CIDR fix documentation
+│   ├── SELECTIVE-DEPLOYMENT.md  # Selective cluster deployment guide
 │   └── PROJECT_SUMMARY.md  # Quick reference
 │
 ├── Makefile               # Automation commands
@@ -64,6 +71,39 @@ azure-landing-zone/
 ```
 
 ## Quick Start
+
+### 1. Deploy Core Infrastructure
+```
+GitHub Actions → deploy-infrastructure
+  module: all
+  action: apply
+  clusters: all
+⏱️ ~60-70 minutes
+```
+
+### 2. Deploy Ingress NGINX (Separate Workflow)
+```
+GitHub Actions → deploy-ingress-nginx
+  clusters: all
+  ingress_type: both
+  action: apply
+  validate: true
+⏱️ ~5 minutes per cluster
+```
+
+### 3. Access Your Clusters
+```bash
+az aks get-credentials --resource-group rg-network --name aks-<ENV>
+kubectl get nodes
+```
+
+### 4. Verify Ingress
+```
+GitHub Actions → deploy-ingress-nginx
+  action: status
+```
+
+---
 
 ### Prerequisites
 
@@ -115,13 +155,40 @@ cp terraform.tfvars.example terraform.tfvars
 From the project root:
 
 ```bash
-# Deploy all modules in order
+# Deploy all modules in order (all clusters)
 make deploy-all
 
 # Or deploy individually
 make iam-apply      # Identity and access management
 make network-apply  # VNet, subnets, NSG, NAT Gateway
-make k8s-apply      # AKS clusters
+make k8s-apply      # AKS clusters (all environments)
+```
+
+#### Selective Cluster Deployment
+
+You can choose which clusters to deploy to save time and costs:
+
+```bash
+# Deploy only DEV cluster (~15-20 min, ~$90/month)
+cd terraform/02-kubernetes
+terraform apply -var="deploy_clusters=dev"
+
+# Deploy DEV + STG (~25-30 min, ~$180/month)
+terraform apply -var="deploy_clusters=dev,stg"
+
+# Deploy DEV + STG + PRD (~40-50 min, ~$350/month)
+terraform apply -var="deploy_clusters=dev,stg,prd"
+
+# Deploy all clusters (~60-70 min, ~$450-650/month)
+terraform apply -var="deploy_clusters=all"
+# Or simply (all is the default):
+terraform apply
+
+# Deploy only production
+terraform apply -var="deploy_clusters=prd"
+
+# Deploy only sandbox for testing
+terraform apply -var="deploy_clusters=sdx"
 ```
 
 ### 5. Access Your Clusters
@@ -150,12 +217,12 @@ kubectl get nodes
 
 ### Networking (01-networking)
 
-- **Virtual Network**: `vnet-shared-network` (172.31.0.0/16)
+- **Virtual Network**: `vnet-shared-network` (192.168.0.0/16)
 - **Subnets**:
-  - DEV: 172.31.0.0/20 (~4,094 IPs)
-  - STG: 172.31.16.0/20 (~4,094 IPs)
-  - PRD: 172.31.32.0/20 (~4,094 IPs)
-  - SDX: 172.31.48.0/20 (~4,094 IPs)
+  - DEV: 192.168.0.0/20 (~4,094 IPs)
+  - STG: 192.168.16.0/20 (~4,094 IPs)
+  - PRD: 192.168.32.0/20 (~4,094 IPs)
+  - SDX: 192.168.48.0/20 (~4,094 IPs)
 - **Network Security Groups**: Basic rules for SSH, HTTP, HTTPS
 - **NAT Gateway**: Zone-redundant gateway for outbound internet connectivity
 - **Region**: Brazil South (brazilsouth)
@@ -166,10 +233,10 @@ Four AKS clusters with environment-specific configurations:
 
 | Cluster   | Version | VM Size         | Node Range | Private | Purpose                 |
 |-----------|---------|-----------------|------------|---------|-------------------------|
-| aks-dev   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
-| aks-stg   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
-| aks-prd   | 1.30    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
-| aks-sdx   | 1.30    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
+| aks-dev   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
+| aks-stg   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
+| aks-prd   | 1.31    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
+| aks-sdx   | 1.31    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
 
 **Features**:
 - Azure CNI networking for native VNet integration
@@ -208,8 +275,120 @@ make k8s-apply     # Deploy Kubernetes clusters
 
 GitHub Actions workflows are included for automated testing and deployment:
 
-- **terraform-validate.yml**: Validates Terraform code on pull requests
-- **deploy-infrastructure.yml**: Automated deployment pipeline
+### Infrastructure Workflows
+
+1. **deploy-infrastructure.yml** - Deploy core infrastructure
+   - IAM (Module 00)
+   - Networking (Module 01)
+   - Kubernetes/AKS (Module 02)
+   - Does NOT deploy Ingress NGINX
+
+2. **terraform-validate.yml** - Terraform validation and security scanning
+   - Runs on pull requests
+   - Validates syntax and formatting
+
+### Ingress NGINX Workflows
+
+3. **deploy-ingress-nginx.yml** - Deploy/manage Ingress NGINX
+   - Deploy External and/or Internal Ingress
+   - Multi-cluster support
+   - Automatic validation
+   - Actions: apply, delete, status
+
+4. **destroy-ingress-nginx.yml** - Cleanup Ingress NGINX
+   - Remove Ingress from specific clusters
+   - Requires explicit confirmation
+   - Complete cleanup including stuck resources
+
+### Why Separate Ingress Workflow?
+
+Ingress NGINX is deployed via a **dedicated workflow** (not part of infrastructure deployment):
+
+**Benefits:**
+- ✅ **Independent updates**: Update Ingress without touching infrastructure (~5 min vs ~60 min)
+- ✅ **Selective deployment**: Choose specific clusters and ingress types
+- ✅ **Quick rollback**: Easy to rollback or update Ingress versions
+- ✅ **Isolated testing**: Test Ingress changes without risking infra
+- ✅ **Cost efficiency**: Deploy Ingress only when needed
+
+### Automated Deployment via GitHub Actions
+
+Trigger the `deploy-infrastructure` workflow with:
+
+#### Parameters:
+- **module**: `all`, `00-iam`, `01-networking`, or `02-kubernetes`
+- **action**: `plan` or `apply`
+- **clusters**: `all`, `dev`, `stg`, `prd`, `sdx`, or combinations like `dev,stg` (for kubernetes module only)
+
+#### Examples:
+
+**Deploy all infrastructure with all clusters:**
+```
+Workflow: deploy-infrastructure
+Inputs:
+  - module: all
+  - action: apply
+  - clusters: all
+```
+
+**Deploy only Kubernetes module with specific clusters:**
+```
+Workflow: deploy-infrastructure
+Inputs:
+  - module: 02-kubernetes
+  - action: apply
+  - clusters: dev,stg
+```
+
+**Plan changes for production cluster only:**
+```
+Workflow: deploy-infrastructure
+Inputs:
+  - module: 02-kubernetes
+  - action: plan
+  - clusters: prd
+```
+
+### Ingress NGINX Deployment Examples
+
+**Deploy Ingress to all clusters:**
+```
+Workflow: deploy-ingress-nginx
+Inputs:
+  - clusters: all
+  - ingress_type: both
+  - action: apply
+  - validate: true
+```
+
+**Deploy only External Ingress to DEV:**
+```
+Workflow: deploy-ingress-nginx
+Inputs:
+  - clusters: dev
+  - ingress_type: external
+  - action: apply
+  - validate: true
+```
+
+**Check Ingress status:**
+```
+Workflow: deploy-ingress-nginx
+Inputs:
+  - clusters: all
+  - ingress_type: both
+  - action: status
+  - validate: false
+```
+
+**Remove Ingress from staging:**
+```
+Workflow: destroy-ingress-nginx
+Inputs:
+  - clusters: stg
+  - ingress_type: both
+  - confirm: yes
+```
 
 See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for required secrets configuration.
 

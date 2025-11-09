@@ -18,7 +18,7 @@ variable "vnet_name" {
 variable "vnet_address_space" {
   description = "Address space for the Virtual Network"
   type        = string
-  default     = "172.31.0.0/16"
+  default     = "192.168.0.0/16"
 }
 
 variable "subnet_configs" {
@@ -31,22 +31,22 @@ variable "subnet_configs" {
   default = {
     dev = {
       name              = "dev-subnet"
-      address_prefix    = "172.31.0.0/20"
+      address_prefix    = "192.168.0.0/20"
       service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
     }
     stg = {
       name              = "stg-subnet"
-      address_prefix    = "172.31.16.0/20"
+      address_prefix    = "192.168.16.0/20"
       service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
     }
     prd = {
       name              = "prd-subnet"
-      address_prefix    = "172.31.32.0/20"
+      address_prefix    = "192.168.32.0/20"
       service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.AzureCosmosDB"]
     }
     sdx = {
       name              = "sdx-subnet"
-      address_prefix    = "172.31.48.0/20"
+      address_prefix    = "192.168.48.0/20"
       service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.EventHub"]
     }
   }
