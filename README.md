@@ -12,7 +12,7 @@ This landing zone provides a complete foundation for running containerized workl
 - **Selective cluster deployment**: Deploy only the clusters you need (dev, stg, prd, sdx, or any combination)
 - **Network security**: NSGs, NAT Gateway for egress traffic, and private cluster support for production
 - **Identity management**: Managed identities for AKS workloads with proper RBAC assignments
-- **Kubernetes-ready**: 4 AKS clusters (v1.31) with Azure CNI, network policies, and auto-scaling
+- **Kubernetes-ready**: 4 AKS clusters (v1.30) with Azure CNI, network policies, and auto-scaling
 - **GitOps-ready**: GitHub Actions workflows for automated validation and deployment with cluster selection
 - **Cost-optimized**: Estimated $90-650/month depending on which clusters you deploy
 
@@ -233,10 +233,10 @@ Four AKS clusters with environment-specific configurations:
 
 | Cluster   | Version | VM Size         | Node Range | Private | Purpose                 |
 |-----------|---------|-----------------|------------|---------|-------------------------|
-| aks-dev   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
-| aks-stg   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
-| aks-prd   | 1.31    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
-| aks-sdx   | 1.31    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
+| aks-dev   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
+| aks-stg   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
+| aks-prd   | 1.30    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
+| aks-sdx   | 1.30    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
 
 **Features**:
 - Azure CNI networking for native VNet integration
