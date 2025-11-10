@@ -32,6 +32,11 @@ on:
           - 'sdx'
           - 'dev,stg'
           - 'dev,stg,prd'
+      import_existing:
+        description: 'Import existing resources before apply'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   deploy:
@@ -56,7 +61,87 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          IMPORT_EXISTING: ${{ github.event.inputs.import_existing }}
         run: |
+          # Function to import existing resources for a module
+          import_existing_resources() {
+            local module=$1
+            echo "🔄 Checking for existing resources to import..."
+            
+            case "$module" in
+              00-iam)
+                # Resource Group
+                if az group show --name rg-network &>/dev/null; then
+                  echo "  → Importing Resource Group: rg-network"
+                  terraform import azurerm_resource_group.iam /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network 2>/dev/null || echo "    (already in state)"
+                fi
+                
+                # Managed Identities
+                for env in dev stg prd sdx; do
+                  if az identity show --name mi-aks-$env --resource-group rg-network &>/dev/null; then
+                    echo "  → Importing Managed Identity: mi-aks-$env"
+                    terraform import "azurerm_user_assigned_identity.aks_env[\"$env\"]" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-$env 2>/dev/null || echo "    (already in state)"
+                  fi
+                done
+                
+                # Shared Identity (if exists)
+                if az identity show --name mi-aks-cluster-shared --resource-group rg-network &>/dev/null; then
+                  echo "  → Importing Managed Identity: mi-aks-cluster-shared"
+                  terraform import 'azurerm_user_assigned_identity.aks[0]' /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-cluster-shared 2>/dev/null || echo "    (already in state)"
+                fi
+                ;;
+                
+              01-networking)
+                # Virtual Network
+                if az network vnet show --name vnet-shared-network --resource-group rg-network &>/dev/null; then
+                  echo "  → Importing Virtual Network: vnet-shared-network"
+                  terraform import azurerm_virtual_network.shared /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network 2>/dev/null || echo "    (already in state)"
+                fi
+                
+                # Subnets
+                for subnet_name in dev-subnet stg-subnet prd-subnet sdx-subnet; do
+                  env=$(echo $subnet_name | cut -d'-' -f1)
+                  if az network vnet subnet show --vnet-name vnet-shared-network --name $subnet_name --resource-group rg-network &>/dev/null; then
+                    echo "  → Importing Subnet: $subnet_name"
+                    terraform import "azurerm_subnet.subnets[\"$env\"]" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network/subnets/$subnet_name 2>/dev/null || echo "    (already in state)"
+                  fi
+                done
+                
+                # NSG
+                if az network nsg show --name nsg-allow-ssh --resource-group rg-network &>/dev/null; then
+                  echo "  → Importing NSG: nsg-allow-ssh"
+                  terraform import azurerm_network_security_group.allow_ssh /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/networkSecurityGroups/nsg-allow-ssh 2>/dev/null || echo "    (already in state)"
+                fi
+                
+                # Public IP
+                if az network public-ip show --name pip-nat-gateway-shared --resource-group rg-network &>/dev/null; then
+                  echo "  → Importing Public IP: pip-nat-gateway-shared"
+                  terraform import azurerm_public_ip.nat_gateway /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/publicIPAddresses/pip-nat-gateway-shared 2>/dev/null || echo "    (already in state)"
+                fi
+                
+                # NAT Gateway
+                if az network nat gateway show --name nat-gateway-shared --resource-group rg-network &>/dev/null; then
+                  echo "  → Importing NAT Gateway: nat-gateway-shared"
+                  terraform import azurerm_nat_gateway.shared /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/natGateways/nat-gateway-shared 2>/dev/null || echo "    (already in state)"
+                fi
+                ;;
+                
+              02-kubernetes)
+                # AKS Clusters
+                for cluster_name in aks-dev aks-stg aks-prd aks-sdx; do
+                  env=$(echo $cluster_name | cut -d'-' -f2)
+                  if az aks show --name $cluster_name --resource-group rg-network &>/dev/null; then
+                    echo "  → Importing AKS Cluster: $cluster_name"
+                    terraform import "module.aks_clusters[\"$env\"].azurerm_kubernetes_cluster.aks" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ContainerService/managedClusters/$cluster_name 2>/dev/null || echo "    (already in state)"
+                  fi
+                done
+                ;;
+            esac
+            
+            echo "✅ Import completed for module: $module"
+          }
+          
+          # Main deployment logic
           if [ "${{ github.event.inputs.module }}" == "all" ]; then
             # Deploy all modules sequentially
             for module in 00-iam 01-networking 02-kubernetes; do
@@ -66,8 +151,15 @@ jobs:
               cd terraform/$module
               terraform init
               
+              # Import existing resources if enabled
+              if [ "$IMPORT_EXISTING" == "true" ]; then
+                cd ../..
+                import_existing_resources $module
+                cd terraform/$module
+              fi
+              
+              # Execute terraform command
               if [ "$module" == "02-kubernetes" ]; then
-                # For kubernetes module, pass deploy_clusters variable
                 echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
                 if [ "${{ github.event.inputs.action }}" == "apply" ]; then
                   terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
@@ -92,8 +184,15 @@ jobs:
             cd terraform/${{ github.event.inputs.module }}
             terraform init
             
+            # Import existing resources if enabled
+            if [ "$IMPORT_EXISTING" == "true" ]; then
+              cd ../..
+              import_existing_resources ${{ github.event.inputs.module }}
+              cd terraform/${{ github.event.inputs.module }}
+            fi
+            
+            # Execute terraform command
             if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
-              # For kubernetes module, pass deploy_clusters variable
               echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
               if [ "${{ github.event.inputs.action }}" == "apply" ]; then
                 terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
@@ -120,6 +219,7 @@ jobs:
           echo "Module: ${{ github.event.inputs.module }}"
           echo "Action: ${{ github.event.inputs.action }}"
           echo "Clusters: ${{ github.event.inputs.clusters }}"
+          echo "Import Existing: ${{ github.event.inputs.import_existing }}"
           echo ""
           
           if [ "${{ job.status }}" == "success" ]; then
@@ -132,8 +232,24 @@ jobs:
               echo "✅ Infrastructure deployment completed successfully!"
               echo ""
               echo "Resources are now live in Azure."
+              echo ""
+              echo "📝 Next Steps:"
+              if [ "${{ github.event.inputs.module }}" == "00-iam" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
+                echo "  1. Deploy networking: module=01-networking, action=apply"
+              fi
+              if [ "${{ github.event.inputs.module }}" == "01-networking" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
+                echo "  2. Deploy kubernetes: module=02-kubernetes, action=apply"
+              fi
+              if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
+                echo "  3. Deploy ingress: Use 'deploy-ingress-nginx' workflow"
+              fi
             fi
           else
             echo "❌ Deployment failed. Check logs above."
+            echo ""
+            echo "💡 Common issues:"
+            echo "  - Check GITHUB_SECRETS.md for correct secrets configuration"
+            echo "  - Ensure Service Principal has Owner role"
+            echo "  - Try enabling 'import_existing' option if resources already exist"
           fi
           echo ""
