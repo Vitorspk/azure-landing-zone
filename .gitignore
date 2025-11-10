@@ -19,3 +19,6 @@ crash.log
 *.secret
 secrets/
 credentials/
+
+azure_credentials.json
+docs/AZURE_CREDENTIALS_MIGRATION.md

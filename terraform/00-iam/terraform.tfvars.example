@@ -1,6 +1,8 @@
-# Azure Subscription and Tenant Configuration
-subscription_id = "35a5288e-6993-4afa-97a9-2862baaf944e"
-tenant_id       = "58729694-7d24-4182-94ef-60f4c02329e3"
+# Azure Tenant Configuration
+# Note: subscription_id is now read from ARM_SUBSCRIPTION_ID environment variable
+#       Set it via: export ARM_SUBSCRIPTION_ID="your-subscription-id"
+#       Or in GitHub Actions secrets as: AZURE_SUBSCRIPTION_ID
+tenant_id = "your-tenant-id-here"
 
 # Resource Group Configuration
 resource_group_name = "rg-network"
