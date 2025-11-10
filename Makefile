@@ -20,10 +20,10 @@ destroy-all:
 	cd terraform/00-iam && terraform destroy -auto-approve
 
 iam-apply:
-	cd terraform/00-iam && terraform init && terraform apply
+	cd terraform/00-iam && terraform init && terraform apply -auto-approve
 
 network-apply:
-	cd terraform/01-networking && terraform init && terraform apply
+	cd terraform/01-networking && terraform init && terraform apply -auto-approve
 
 k8s-apply:
-	cd terraform/02-kubernetes && terraform init && terraform apply
+	cd terraform/02-kubernetes && terraform init && terraform apply -auto-approve
