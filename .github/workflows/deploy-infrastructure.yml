@@ -100,16 +100,17 @@ jobs:
                       echo "📋 Extracting resource information from error..."
                       
                       # Extract resource address and ID from error
-                      RESOURCE_TYPE=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[^,]+' | head -1 | tr -d ' ')
+                      # Look for pattern: with azurerm_resource_group.iam,
+                      RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
                       RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
                       
-                      if [ -n "$RESOURCE_TYPE" ] && [ -n "$RESOURCE_ID" ]; then
-                        echo "  Resource: $RESOURCE_TYPE"
+                      if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
+                        echo "  Resource: $RESOURCE_ADDRESS"
                         echo "  ID: $RESOURCE_ID"
                         echo ""
                         echo "🔄 Attempting to import..."
                         
-                        if terraform import "$RESOURCE_TYPE" "$RESOURCE_ID"; then
+                        if terraform import "$RESOURCE_ADDRESS" "$RESOURCE_ID"; then
                           echo "✅ Import successful! Retrying apply..."
                           
                           # Retry apply
@@ -198,16 +199,17 @@ jobs:
                     echo "📋 Extracting resource information from error..."
                     
                     # Extract resource address and ID from error
-                    RESOURCE_TYPE=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[^,]+' | head -1 | tr -d ' ')
+                    # Look for pattern: with azurerm_resource_group.iam,
+                    RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
                     RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
                     
-                    if [ -n "$RESOURCE_TYPE" ] && [ -n "$RESOURCE_ID" ]; then
-                      echo "  Resource: $RESOURCE_TYPE"
+                    if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
+                      echo "  Resource: $RESOURCE_ADDRESS"
                       echo "  ID: $RESOURCE_ID"
                       echo ""
                       echo "🔄 Attempting to import..."
                       
-                      if terraform import "$RESOURCE_TYPE" "$RESOURCE_ID"; then
+                      if terraform import "$RESOURCE_ADDRESS" "$RESOURCE_ID"; then
                         echo "✅ Import successful! Retrying apply..."
                         
                         # Retry apply
