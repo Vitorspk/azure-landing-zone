@@ -27,5 +27,5 @@ provider "azurerm" {
 }
 
 provider "azuread" {
-  tenant_id = var.tenant_id
+  # tenant_id will be read from ARM_TENANT_ID environment variable
 }
