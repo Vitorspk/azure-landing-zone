@@ -270,7 +270,7 @@ az ad sp create-for-rbac \
 **Solução:**
 ```bash
 # 1. Verificar permissões atuais
-CLIENT_ID="<seu-client-id>"
+CLIENT_ID="<CLIENT_ID>"
 az role assignment list --assignee "$CLIENT_ID" --output table
 
 # 2. Adicionar role Owner se estiver faltando
