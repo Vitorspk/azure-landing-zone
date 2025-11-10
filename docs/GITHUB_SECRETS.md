@@ -4,6 +4,19 @@ Complete guide for configuring GitHub secrets required for CI/CD workflows.
 
 ---
 
+## 📝 Quick Checklist
+
+Before running GitHub Actions workflows, ensure:
+
+- [ ] Service Principal created with **Owner** role (not Contributor)
+- [ ] All 5 secrets configured in GitHub repository
+- [ ] Service Principal has both Contributor AND Owner roles visible in `az role assignment list`
+- [ ] Wait 1-2 minutes after creating/updating permissions before running workflows
+
+⚠️ **Common Issue**: Creating Service Principal with "Contributor" role will cause `AuthorizationFailed` errors when Terraform tries to create role assignments. Always use **"Owner"** role.
+
+---
+
 ## Overview
 
 This project uses GitHub Actions for automated infrastructure deployment and management. The workflows require several Azure credentials configured as GitHub secrets to authenticate and deploy resources.
@@ -86,16 +99,21 @@ az account show --query tenantId -o tsv
 
 ### Step 2: Create Service Principal
 
-Create a Service Principal with Contributor role for GitHub Actions:
+Create a Service Principal with **Owner** role for GitHub Actions. This is required because Terraform needs to create role assignments:
 
 ```bash
-# Create Service Principal
+# Create Service Principal with Owner role
 az ad sp create-for-rbac \
   --name "sp-github-actions-landing-zone" \
-  --role contributor \
+  --role "Owner" \
   --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID> \
   --sdk-auth
 ```
+
+**⚠️ Important**: Use **"Owner"** role (not "contributor") because:
+- Terraform needs to create IAM role assignments
+- The `00-iam` module assigns roles to managed identities
+- Without Owner, you'll get "AuthorizationFailed" errors
 
 **Output** (save this JSON):
 ```json
@@ -177,7 +195,7 @@ gh secret set AZURE_TENANT_ID --body "<tenant-id>"
 # Save Service Principal output to file
 az ad sp create-for-rbac \
   --name "sp-github-actions-landing-zone" \
-  --role contributor \
+  --role "Owner" \
   --scopes /subscriptions/<YOUR_SUBSCRIPTION_ID> \
   --sdk-auth > azure-credentials.json
 
@@ -258,9 +276,13 @@ az ad sp credential reset \
 
 ### 3. Use Least Privilege
 
-The Service Principal only needs these permissions:
-- **Contributor** role on subscription (or specific resource group)
-- **Network Contributor** for network operations (optional, if limiting scope)
+The Service Principal needs **Owner** role for this project because:
+- Terraform creates IAM role assignments in the `00-iam` module
+- Managed identities need roles assigned to them
+
+If you want tighter security:
+- Use **"User Access Administrator"** + **"Contributor"** instead of Owner
+- Or scope Owner role only to specific resource groups after initial setup
 
 ### 4. Use Environment Secrets (Optional)
 
@@ -347,11 +369,11 @@ az ad sp create-for-rbac --name "sp-github-new" --role contributor --scopes /sub
 
 **Cause**: Service Principal lacks required permissions
 
-**Solution**: Grant Contributor role:
+**Solution**: Grant Owner role (required for role assignments):
 ```bash
 az role assignment create \
   --assignee <CLIENT_ID> \
-  --role Contributor \
+  --role "Owner" \
   --scope /subscriptions/<SUBSCRIPTION_ID>
 ```
 
@@ -429,10 +451,10 @@ For enhanced security, you can use GitHub's OIDC provider instead of client secr
 ### Setup OIDC
 
 ```bash
-# Create Service Principal
+# Create Service Principal with Owner role
 SP_ID=$(az ad sp create-for-rbac \
   --name "sp-github-oidc" \
-  --role contributor \
+  --role "Owner" \
   --scopes /subscriptions/<SUBSCRIPTION_ID> \
   --query appId -o tsv)
 
@@ -488,8 +510,8 @@ steps:
 az account show --query id -o tsv          # Subscription ID
 az account show --query tenantId -o tsv    # Tenant ID
 
-# Create Service Principal
-az ad sp create-for-rbac --name "sp-name" --role contributor --scopes /subscriptions/<SUB_ID> --sdk-auth
+# Create Service Principal with Owner role
+az ad sp create-for-rbac --name "sp-name" --role "Owner" --scopes /subscriptions/<SUB_ID> --sdk-auth
 
 # Reset credentials
 az ad sp credential reset --id <CLIENT_ID>

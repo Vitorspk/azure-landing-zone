@@ -22,7 +22,8 @@ Before starting the deployment, ensure you have:
   - Managed Identities
   - AKS Clusters
   - NAT Gateway
-- Service Principal or Managed Identity for GitHub Actions (if using CI/CD)
+  - **Role Assignments** (requires Owner or User Access Administrator role)
+- Service Principal with **Owner** role for GitHub Actions (if using CI/CD)
 
 ---
 
@@ -564,12 +565,25 @@ az vm list-usage --location brazilsouth --output table
 
 ### Issue: Insufficient Permissions
 
-**Symptom**: `AuthorizationFailed` errors
+**Symptom**: `AuthorizationFailed` errors when creating role assignments
 
-**Solution**: Verify your account has required roles:
-- Contributor or Owner on subscription
-- Network Contributor for network operations
-- Managed Identity Operator for identity creation
+**Solution**: Verify your account or Service Principal has required roles:
+- **Owner** role (preferred) - Can create resources AND role assignments
+- Or **Contributor** + **User Access Administrator** roles
+
+For Service Principal used in GitHub Actions:
+```bash
+# Check current permissions
+az role assignment list --assignee <CLIENT_ID> --output table
+
+# Add Owner role if missing
+az role assignment create \
+  --assignee <CLIENT_ID> \
+  --role "Owner" \
+  --scope /subscriptions/<SUBSCRIPTION_ID>
+```
+
+**Why Owner is needed**: The IAM module (`00-iam`) creates role assignments for managed identities, which requires elevated permissions beyond Contributor.
 
 ### Issue: Ingress LoadBalancer Stuck in Pending
 
