@@ -548,6 +548,30 @@ az role assignment list --assignee "<APP_ID>" --output table
 
 See [GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for complete setup instructions.
 
+### Resource Already Exists Error
+
+**Error**: `a resource with the ID "/subscriptions/.../resourceGroups/rg-network" already exists`
+
+**Cause**: Resource was created outside Terraform or state file is missing.
+
+**Solution**: The workflow now **automatically imports** existing resource groups. If you see this error:
+
+1. **For local development:**
+   ```bash
+   cd terraform/00-iam
+   terraform import azurerm_resource_group.iam /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/rg-network
+   terraform apply
+   ```
+
+2. **For GitHub Actions:** Just re-run the workflow - it will import automatically.
+
+3. **To start fresh (destructive):**
+   ```bash
+   # Delete the resource group (WARNING: deletes all resources inside)
+   az group delete --name rg-network --yes
+   # Then run terraform apply again
+   ```
+
 ### Unable to access AKS cluster
 
 For non-private clusters, you may need to authorize your IP:
