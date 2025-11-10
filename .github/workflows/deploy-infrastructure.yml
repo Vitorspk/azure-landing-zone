@@ -127,59 +127,75 @@ jobs:
                     if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
                       echo ""
                       echo "⚠️  'Already Exists' error detected!"
-                      echo "📋 Extracting resource information from error..."
+                      echo "📋 Multiple resources may need to be imported..."
+                      echo ""
                       
-                      # Extract resource address and ID from error
-                      # Look for pattern: with azurerm_resource_group.iam,
-                      RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
-                      RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                      # Extract ALL resources that need import
+                      RESOURCES_TO_IMPORT=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+(\[[^\]]+\])?' | sort -u)
+                      RESOURCE_COUNT=$(echo "$RESOURCES_TO_IMPORT" | wc -l)
                       
-                      # Validate extraction succeeded
-                      if [ -z "$RESOURCE_ADDRESS" ] || [ -z "$RESOURCE_ID" ]; then
-                        echo "❌ Failed to extract resource information from error message"
-                        echo "This may indicate a Terraform version change or unexpected error format."
+                      echo "Found $RESOURCE_COUNT resource(s) that need import:"
+                      echo "$RESOURCES_TO_IMPORT"
+                      echo ""
+                      
+                      if [ $RESOURCE_COUNT -gt 5 ]; then
+                        echo "❌ Too many resources to auto-import ($RESOURCE_COUNT resources)"
                         echo ""
-                        echo "Raw error output:"
-                        echo "$APPLY_OUTPUT" | grep -A 10 "already exists"
-                        echo ""
-                        echo "💡 Manual fix required:"
-                        echo "   az group delete --name rg-network --yes --no-wait"
-                        echo "   Then re-run this workflow"
+                        echo "💡 This indicates orphaned resources from previous deployments."
+                        echo "Quickest solution:"
+                        echo "   1. az group delete --name rg-network --yes --no-wait"
+                        echo "   2. Wait 3-5 minutes"
+                        echo "   3. Re-run this workflow"
                         exit 1
                       fi
                       
-                      if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
-                        echo "  Resource: $RESOURCE_ADDRESS"
-                        echo "  ID: $RESOURCE_ID"
-                        echo ""
-                        echo "🔄 Attempting to import..."
+                      # Try to import each resource
+                      IMPORT_SUCCESS=true
+                      while IFS= read -r RESOURCE_ADDRESS; do
+                        if [ -z "$RESOURCE_ADDRESS" ]; then
+                          continue
+                        fi
+                        
+                        # Extract ID for this specific resource
+                        RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -A 2 "with $RESOURCE_ADDRESS" | grep -oP 'ID "\K[^"]+' | head -1)
+                        
+                        if [ -z "$RESOURCE_ID" ]; then
+                          echo "❌ Failed to extract ID for: $RESOURCE_ADDRESS"
+                          IMPORT_SUCCESS=false
+                          continue
+                        fi
+                        
+                        echo "🔄 Importing: $RESOURCE_ADDRESS"
+                        echo "   ID: $RESOURCE_ID"
                         
                         if terraform import "$RESOURCE_ADDRESS" "$RESOURCE_ID"; then
-                          echo "✅ Import successful! Retrying apply..."
-                          
-                          # Retry apply
-                          if [ "$module" == "02-kubernetes" ]; then
-                            terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-                          else
-                            terraform apply -auto-approve
-                          fi
-                          
-                          if [ $? -eq 0 ]; then
-                            echo "✅ Apply successful after import!"
-                          else
-                            echo "❌ Apply failed after import"
-                            exit 1
-                          fi
+                          echo "✅ Imported successfully!"
                         else
-                          echo "❌ Import failed"
-                          echo ""
-                          echo "💡 Manual fix needed:"
-                          echo "   az group delete --name rg-network --yes --no-wait"
-                          echo "   Then re-run this workflow"
+                          echo "❌ Import failed for: $RESOURCE_ADDRESS"
+                          IMPORT_SUCCESS=false
+                        fi
+                        echo ""
+                      done <<< "$RESOURCES_TO_IMPORT"
+                      
+                      if [ "$IMPORT_SUCCESS" = true ]; then
+                        echo "✅ All resources imported! Retrying apply..."
+                        echo ""
+                        
+                        # Retry apply
+                        if [ "$module" == "02-kubernetes" ]; then
+                          terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                        else
+                          terraform apply -auto-approve
+                        fi
+                        
+                        if [ $? -eq 0 ]; then
+                          echo "✅ Apply successful after import!"
+                        else
+                          echo "❌ Apply failed after import"
                           exit 1
                         fi
                       else
-                        echo "❌ Could not extract resource information from error"
+                        echo "❌ Some imports failed"
                         echo ""
                         echo "💡 Manual fix needed:"
                         echo "   az group delete --name rg-network --yes --no-wait"
@@ -240,59 +256,75 @@ jobs:
                   if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
                     echo ""
                     echo "⚠️  'Already Exists' error detected!"
-                    echo "📋 Extracting resource information from error..."
+                    echo "📋 Multiple resources may need to be imported..."
+                    echo ""
                     
-                    # Extract resource address and ID from error
-                    # Look for pattern: with azurerm_resource_group.iam,
-                    RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
-                    RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                    # Extract ALL resources that need import
+                    RESOURCES_TO_IMPORT=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+(\[[^\]]+\])?' | sort -u)
+                    RESOURCE_COUNT=$(echo "$RESOURCES_TO_IMPORT" | wc -l)
                     
-                    # Validate extraction succeeded
-                    if [ -z "$RESOURCE_ADDRESS" ] || [ -z "$RESOURCE_ID" ]; then
-                      echo "❌ Failed to extract resource information from error message"
-                      echo "This may indicate a Terraform version change or unexpected error format."
+                    echo "Found $RESOURCE_COUNT resource(s) that need import:"
+                    echo "$RESOURCES_TO_IMPORT"
+                    echo ""
+                    
+                    if [ $RESOURCE_COUNT -gt 5 ]; then
+                      echo "❌ Too many resources to auto-import ($RESOURCE_COUNT resources)"
                       echo ""
-                      echo "Raw error output:"
-                      echo "$APPLY_OUTPUT" | grep -A 10 "already exists"
-                      echo ""
-                      echo "💡 Quick fix:"
-                      echo "   az group delete --name rg-network --yes --no-wait"
-                      echo "   Wait 3 minutes, then re-run this workflow"
+                      echo "💡 This indicates orphaned resources from previous deployments."
+                      echo "Quickest solution:"
+                      echo "   1. az group delete --name rg-network --yes --no-wait"
+                      echo "   2. Wait 3-5 minutes"
+                      echo "   3. Re-run this workflow"
                       exit 1
                     fi
                     
-                    if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
-                      echo "  Resource: $RESOURCE_ADDRESS"
-                      echo "  ID: $RESOURCE_ID"
-                      echo ""
-                      echo "🔄 Attempting to import..."
+                    # Try to import each resource
+                    IMPORT_SUCCESS=true
+                    while IFS= read -r RESOURCE_ADDRESS; do
+                      if [ -z "$RESOURCE_ADDRESS" ]; then
+                        continue
+                      fi
+                      
+                      # Extract ID for this specific resource
+                      RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -A 2 "with $RESOURCE_ADDRESS" | grep -oP 'ID "\K[^"]+' | head -1)
+                      
+                      if [ -z "$RESOURCE_ID" ]; then
+                        echo "❌ Failed to extract ID for: $RESOURCE_ADDRESS"
+                        IMPORT_SUCCESS=false
+                        continue
+                      fi
+                      
+                      echo "🔄 Importing: $RESOURCE_ADDRESS"
+                      echo "   ID: $RESOURCE_ID"
                       
                       if terraform import "$RESOURCE_ADDRESS" "$RESOURCE_ID"; then
-                        echo "✅ Import successful! Retrying apply..."
-                        
-                        # Retry apply
-                        if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
-                          terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-                        else
-                          terraform apply -auto-approve
-                        fi
-                        
-                        if [ $? -eq 0 ]; then
-                          echo "✅ Apply successful after import!"
-                        else
-                          echo "❌ Apply failed after import"
-                          exit 1
-                        fi
+                        echo "✅ Imported successfully!"
                       else
-                        echo "❌ Import failed"
-                        echo ""
-                        echo "💡 Quick fix:"
-                        echo "   az group delete --name rg-network --yes --no-wait"
-                        echo "   Wait 3 minutes, then re-run this workflow"
+                        echo "❌ Import failed for: $RESOURCE_ADDRESS"
+                        IMPORT_SUCCESS=false
+                      fi
+                      echo ""
+                    done <<< "$RESOURCES_TO_IMPORT"
+                    
+                    if [ "$IMPORT_SUCCESS" = true ]; then
+                      echo "✅ All resources imported! Retrying apply..."
+                      echo ""
+                      
+                      # Retry apply
+                      if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+                        terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                      else
+                        terraform apply -auto-approve
+                      fi
+                      
+                      if [ $? -eq 0 ]; then
+                        echo "✅ Apply successful after import!"
+                      else
+                        echo "❌ Apply failed after import"
                         exit 1
                       fi
                     else
-                      echo "❌ Could not extract resource information from error"
+                      echo "❌ Some imports failed"
                       echo ""
                       echo "💡 Quick fix:"
                       echo "   az group delete --name rg-network --yes --no-wait"
