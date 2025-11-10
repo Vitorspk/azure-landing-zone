@@ -22,7 +22,7 @@ on:
           - 'destroy'
       clusters:
         description: 'Which clusters to deploy (for kubernetes module only)'
-        required: false
+        required: true
         default: 'all'
         type: choice
         options:
@@ -33,6 +33,11 @@ on:
           - 'sdx'
           - 'dev,stg'
           - 'dev,stg,prd'
+      confirm_destroy:
+        description: 'Type "DESTROY" to confirm destruction of resources'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   deploy:
@@ -50,6 +55,31 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Validate Inputs
+        run: |
+          # Validate clusters parameter for kubernetes module
+          if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
+            if [ -z "${{ github.event.inputs.clusters }}" ]; then
+              echo "❌ ERROR: clusters parameter cannot be empty for kubernetes module"
+              exit 1
+            fi
+          fi
+          
+          # Validate destroy confirmation
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            if [ "${{ github.event.inputs.confirm_destroy }}" != "DESTROY" ]; then
+              echo "❌ ERROR: You must type 'DESTROY' to confirm resource destruction"
+              echo "This is a safety check to prevent accidental deletion."
+              exit 1
+            fi
+            
+            # Extra warning for production
+            if [ "${{ github.event.inputs.clusters }}" == "prd" ] || [ "${{ github.event.inputs.clusters }}" == "all" ]; then
+              echo "⚠️  WARNING: You are about to destroy PRODUCTION resources!"
+              echo "This action is irreversible."
+            fi
+          fi
 
       - name: Deploy Module
         env:
@@ -103,6 +133,20 @@ jobs:
                       # Look for pattern: with azurerm_resource_group.iam,
                       RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
                       RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                      
+                      # Validate extraction succeeded
+                      if [ -z "$RESOURCE_ADDRESS" ] || [ -z "$RESOURCE_ID" ]; then
+                        echo "❌ Failed to extract resource information from error message"
+                        echo "This may indicate a Terraform version change or unexpected error format."
+                        echo ""
+                        echo "Raw error output:"
+                        echo "$APPLY_OUTPUT" | grep -A 10 "already exists"
+                        echo ""
+                        echo "💡 Manual fix required:"
+                        echo "   az group delete --name rg-network --yes --no-wait"
+                        echo "   Then re-run this workflow"
+                        exit 1
+                      fi
                       
                       if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
                         echo "  Resource: $RESOURCE_ADDRESS"
@@ -202,6 +246,20 @@ jobs:
                     # Look for pattern: with azurerm_resource_group.iam,
                     RESOURCE_ADDRESS=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[a-z_]+\.[a-z_]+' | head -1)
                     RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                    
+                    # Validate extraction succeeded
+                    if [ -z "$RESOURCE_ADDRESS" ] || [ -z "$RESOURCE_ID" ]; then
+                      echo "❌ Failed to extract resource information from error message"
+                      echo "This may indicate a Terraform version change or unexpected error format."
+                      echo ""
+                      echo "Raw error output:"
+                      echo "$APPLY_OUTPUT" | grep -A 10 "already exists"
+                      echo ""
+                      echo "💡 Quick fix:"
+                      echo "   az group delete --name rg-network --yes --no-wait"
+                      echo "   Wait 3 minutes, then re-run this workflow"
+                      exit 1
+                    fi
                     
                     if [ -n "$RESOURCE_ADDRESS" ] && [ -n "$RESOURCE_ID" ]; then
                       echo "  Resource: $RESOURCE_ADDRESS"
