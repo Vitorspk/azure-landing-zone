@@ -1,11 +1,15 @@
 # Terraform
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
-*.tfvars
-!*.tfvars.example
+*.tfvars.backup
 crash.log
+crash.*.log
+
+# Allow non-sensitive tfvars that are needed for GitHub Actions
+# These files should NOT contain secrets - use environment variables for credentials
+!terraform.tfvars
+!*.tfvars.example
 
 # Azure
 .azure/
