@@ -191,7 +191,7 @@ az role assignment list --assignee "<CLIENT_ID>" --output table
 # Deve mostrar:
 # Principal    Role     Scope
 # ----------   ------   ---------------------------
-# <CLIENT_ID>  Owner    /subscriptions/<SUB_ID>
+# <CLIENT_ID>  Owner    /subscriptions/<SUBSCRIPTION_ID>
 ```
 
 ## 🔧 Como Obter as Credenciais
