@@ -1,8 +1,3 @@
-variable "tenant_id" {
-  description = "Azure Tenant ID"
-  type        = string
-}
-
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
