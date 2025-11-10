@@ -19,6 +19,7 @@ on:
         options:
           - 'plan'
           - 'apply'
+          - 'destroy'
       clusters:
         description: 'Which clusters to deploy (for kubernetes module only)'
         required: false
@@ -32,11 +33,6 @@ on:
           - 'sdx'
           - 'dev,stg'
           - 'dev,stg,prd'
-      import_existing:
-        description: 'Import existing resources before apply'
-        required: false
-        type: boolean
-        default: true
 
 jobs:
   deploy:
@@ -61,109 +57,8 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          IMPORT_EXISTING: ${{ github.event.inputs.import_existing }}
         run: |
-          # Function to safely import a resource
-          safe_import() {
-            local resource_address=$1
-            local resource_id=$2
-            
-            # Check if resource is already in state
-            if terraform state show "$resource_address" &>/dev/null; then
-              echo "    ✓ Already in state"
-              return 0
-            fi
-            
-            # Try to import
-            if terraform import "$resource_address" "$resource_id" 2>&1 | grep -q "Successfully imported"; then
-              echo "    ✓ Imported successfully"
-              return 0
-            elif terraform state show "$resource_address" &>/dev/null; then
-              echo "    ✓ Now in state"
-              return 0
-            else
-              echo "    ⚠ Import failed (resource may not exist in Azure)"
-              return 0  # Don't fail the workflow
-            fi
-          }
-          
-          # Function to import existing resources for a module
-          import_existing_resources() {
-            local module=$1
-            echo "🔄 Checking for existing resources to import..."
-            
-            case "$module" in
-              00-iam)
-                # Resource Group
-                if az group show --name rg-network &>/dev/null; then
-                  echo "  → Resource Group: rg-network"
-                  safe_import "azurerm_resource_group.iam" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network"
-                fi
-                
-                # Managed Identities - Per Environment
-                for env in dev stg prd sdx; do
-                  if az identity show --name mi-aks-$env --resource-group rg-network &>/dev/null; then
-                    echo "  → Managed Identity: mi-aks-$env"
-                    safe_import "azurerm_user_assigned_identity.aks_env[\\\"$env\\\"]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-$env"
-                  fi
-                done
-                
-                # Shared Identity
-                if az identity show --name mi-aks-cluster-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → Managed Identity: mi-aks-cluster-shared"
-                  safe_import "azurerm_user_assigned_identity.aks[0]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-cluster-shared"
-                fi
-                ;;
-                
-              01-networking)
-                # Virtual Network
-                if az network vnet show --name vnet-shared-network --resource-group rg-network &>/dev/null; then
-                  echo "  → Virtual Network: vnet-shared-network"
-                  safe_import "azurerm_virtual_network.shared" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network"
-                fi
-                
-                # Subnets
-                for subnet_name in dev-subnet stg-subnet prd-subnet sdx-subnet; do
-                  env=$(echo $subnet_name | cut -d'-' -f1)
-                  if az network vnet subnet show --vnet-name vnet-shared-network --name $subnet_name --resource-group rg-network &>/dev/null; then
-                    echo "  → Subnet: $subnet_name"
-                    safe_import "azurerm_subnet.subnets[\\\"$env\\\"]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network/subnets/$subnet_name"
-                  fi
-                done
-                
-                # NSG
-                if az network nsg show --name nsg-allow-ssh --resource-group rg-network &>/dev/null; then
-                  echo "  → NSG: nsg-allow-ssh"
-                  safe_import "azurerm_network_security_group.allow_ssh" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/networkSecurityGroups/nsg-allow-ssh"
-                fi
-                
-                # Public IP
-                if az network public-ip show --name pip-nat-gateway-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → Public IP: pip-nat-gateway-shared"
-                  safe_import "azurerm_public_ip.nat_gateway" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/publicIPAddresses/pip-nat-gateway-shared"
-                fi
-                
-                # NAT Gateway
-                if az network nat gateway show --name nat-gateway-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → NAT Gateway: nat-gateway-shared"
-                  safe_import "azurerm_nat_gateway.shared" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/natGateways/nat-gateway-shared"
-                fi
-                ;;
-                
-              02-kubernetes)
-                # AKS Clusters
-                for cluster_name in aks-dev aks-stg aks-prd aks-sdx; do
-                  env=$(echo $cluster_name | cut -d'-' -f2)
-                  if az aks show --name $cluster_name --resource-group rg-network &>/dev/null; then
-                    echo "  → AKS Cluster: $cluster_name"
-                    safe_import "module.aks_clusters[\\\"$env\\\"].azurerm_kubernetes_cluster.aks" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ContainerService/managedClusters/$cluster_name"
-                  fi
-                done
-                ;;
-            esac
-            
-            echo "✅ Import process completed"
-          }
+          set +e  # Don't exit on error, we'll handle it
           
           # Main deployment logic
           if [ "${{ github.event.inputs.module }}" == "all" ]; then
@@ -173,28 +68,95 @@ jobs:
               echo "Deploying module: $module"
               echo "========================================"
               cd terraform/$module
+              
               terraform init
               
-              # Import existing resources if enabled
-              if [ "$IMPORT_EXISTING" == "true" ]; then
-                import_existing_resources $module
-              fi
-              
-              # Execute terraform command
-              if [ "$module" == "02-kubernetes" ]; then
-                echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
-                if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-                  terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-                else
-                  terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-                fi
-              else
-                if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-                  terraform apply -auto-approve
-                else
-                  terraform plan
-                fi
-              fi
+              # Handle different actions
+              case "${{ github.event.inputs.action }}" in
+                plan)
+                  if [ "$module" == "02-kubernetes" ]; then
+                    terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                  else
+                    terraform plan
+                  fi
+                  ;;
+                  
+                apply)
+                  # Attempt apply and capture output
+                  if [ "$module" == "02-kubernetes" ]; then
+                    APPLY_OUTPUT=$(terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1)
+                  else
+                    APPLY_OUTPUT=$(terraform apply -auto-approve 2>&1)
+                  fi
+                  
+                  APPLY_EXIT=$?
+                  echo "$APPLY_OUTPUT"
+                  
+                  # Check if error is "already exists"
+                  if [ $APPLY_EXIT -ne 0 ]; then
+                    if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
+                      echo ""
+                      echo "⚠️  'Already Exists' error detected!"
+                      echo "📋 Extracting resource information from error..."
+                      
+                      # Extract resource address and ID from error
+                      RESOURCE_TYPE=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[^,]+' | head -1 | tr -d ' ')
+                      RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                      
+                      if [ -n "$RESOURCE_TYPE" ] && [ -n "$RESOURCE_ID" ]; then
+                        echo "  Resource: $RESOURCE_TYPE"
+                        echo "  ID: $RESOURCE_ID"
+                        echo ""
+                        echo "🔄 Attempting to import..."
+                        
+                        if terraform import "$RESOURCE_TYPE" "$RESOURCE_ID"; then
+                          echo "✅ Import successful! Retrying apply..."
+                          
+                          # Retry apply
+                          if [ "$module" == "02-kubernetes" ]; then
+                            terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                          else
+                            terraform apply -auto-approve
+                          fi
+                          
+                          if [ $? -eq 0 ]; then
+                            echo "✅ Apply successful after import!"
+                          else
+                            echo "❌ Apply failed after import"
+                            exit 1
+                          fi
+                        else
+                          echo "❌ Import failed"
+                          echo ""
+                          echo "💡 Manual fix needed:"
+                          echo "   az group delete --name rg-network --yes --no-wait"
+                          echo "   Then re-run this workflow"
+                          exit 1
+                        fi
+                      else
+                        echo "❌ Could not extract resource information from error"
+                        echo ""
+                        echo "💡 Manual fix needed:"
+                        echo "   az group delete --name rg-network --yes --no-wait"
+                        echo "   Then re-run this workflow"
+                        exit 1
+                      fi
+                    else
+                      # Different error
+                      echo "❌ Terraform apply failed with non-import error"
+                      exit 1
+                    fi
+                  fi
+                  ;;
+                  
+                destroy)
+                  if [ "$module" == "02-kubernetes" ]; then
+                    terraform destroy -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                  else
+                    terraform destroy -auto-approve
+                  fi
+                  ;;
+              esac
               
               cd ../..
             done
@@ -204,30 +166,95 @@ jobs:
             echo "Deploying module: ${{ github.event.inputs.module }}"
             echo "========================================"
             cd terraform/${{ github.event.inputs.module }}
+            
             terraform init
             
-            # Import existing resources if enabled
-            if [ "$IMPORT_EXISTING" == "true" ]; then
-              cd ../..
-              import_existing_resources ${{ github.event.inputs.module }}
-              cd terraform/${{ github.event.inputs.module }}
-            fi
-            
-            # Execute terraform command
-            if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
-              echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
-              if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-                terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-              else
-                terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
-              fi
-            else
-              if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-                terraform apply -auto-approve
-              else
-                terraform plan
-              fi
-            fi
+            # Handle different actions
+            case "${{ github.event.inputs.action }}" in
+              plan)
+                if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+                  terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                else
+                  terraform plan
+                fi
+                ;;
+                
+              apply)
+                # Attempt apply and capture output
+                if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+                  APPLY_OUTPUT=$(terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1)
+                else
+                  APPLY_OUTPUT=$(terraform apply -auto-approve 2>&1)
+                fi
+                
+                APPLY_EXIT=$?
+                echo "$APPLY_OUTPUT"
+                
+                # Check if error is "already exists"
+                if [ $APPLY_EXIT -ne 0 ]; then
+                  if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
+                    echo ""
+                    echo "⚠️  'Already Exists' error detected!"
+                    echo "📋 Extracting resource information from error..."
+                    
+                    # Extract resource address and ID from error
+                    RESOURCE_TYPE=$(echo "$APPLY_OUTPUT" | grep -oP 'with \K[^,]+' | head -1 | tr -d ' ')
+                    RESOURCE_ID=$(echo "$APPLY_OUTPUT" | grep -oP 'ID "\K[^"]+' | head -1)
+                    
+                    if [ -n "$RESOURCE_TYPE" ] && [ -n "$RESOURCE_ID" ]; then
+                      echo "  Resource: $RESOURCE_TYPE"
+                      echo "  ID: $RESOURCE_ID"
+                      echo ""
+                      echo "🔄 Attempting to import..."
+                      
+                      if terraform import "$RESOURCE_TYPE" "$RESOURCE_ID"; then
+                        echo "✅ Import successful! Retrying apply..."
+                        
+                        # Retry apply
+                        if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+                          terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                        else
+                          terraform apply -auto-approve
+                        fi
+                        
+                        if [ $? -eq 0 ]; then
+                          echo "✅ Apply successful after import!"
+                        else
+                          echo "❌ Apply failed after import"
+                          exit 1
+                        fi
+                      else
+                        echo "❌ Import failed"
+                        echo ""
+                        echo "💡 Quick fix:"
+                        echo "   az group delete --name rg-network --yes --no-wait"
+                        echo "   Wait 3 minutes, then re-run this workflow"
+                        exit 1
+                      fi
+                    else
+                      echo "❌ Could not extract resource information from error"
+                      echo ""
+                      echo "💡 Quick fix:"
+                      echo "   az group delete --name rg-network --yes --no-wait"
+                      echo "   Wait 3 minutes, then re-run this workflow"
+                      exit 1
+                    fi
+                  else
+                    # Different error
+                    echo "❌ Terraform apply failed"
+                    exit 1
+                  fi
+                fi
+                ;;
+                
+              destroy)
+                if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+                  terraform destroy -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                else
+                  terraform destroy -auto-approve
+                fi
+                ;;
+            esac
           fi
       
       - name: Deployment Summary
@@ -241,7 +268,7 @@ jobs:
           echo "Module: ${{ github.event.inputs.module }}"
           echo "Action: ${{ github.event.inputs.action }}"
           echo "Clusters: ${{ github.event.inputs.clusters }}"
-          echo "Import Existing: ${{ github.event.inputs.import_existing }}"
+          echo "Status: ${{ job.status }}"
           echo ""
           
           if [ "${{ job.status }}" == "success" ]; then
@@ -254,25 +281,15 @@ jobs:
               echo "✅ Infrastructure deployment completed successfully!"
               echo ""
               echo "Resources are now live in Azure."
-              echo ""
-              echo "📝 Next Steps:"
-              if [ "${{ github.event.inputs.module }}" == "00-iam" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
-                echo "  1. Deploy networking: module=01-networking, action=apply"
-              fi
-              if [ "${{ github.event.inputs.module }}" == "01-networking" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
-                echo "  2. Deploy kubernetes: module=02-kubernetes, action=apply"
-              fi
-              if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ] || [ "${{ github.event.inputs.module }}" == "all" ]; then
-                echo "  3. Deploy ingress: Use 'deploy-ingress-nginx' workflow"
-              fi
             fi
           else
-            echo "❌ Deployment failed. Check logs above."
+            echo "❌ Deployment failed."
             echo ""
-            echo "💡 Common issues:"
-            echo "  - Check GITHUB_SECRETS.md for correct secrets configuration"
-            echo "  - Ensure Service Principal has Owner role"
-            echo "  - If resources exist: Delete manually with 'az group delete --name rg-network'"
-            echo "  - Or use remote state backend to persist state between runs"
+            echo "💡 If you saw 'already exists' error, quickest fix:"
+            echo "   1. Run: az group delete --name rg-network --yes --no-wait"
+            echo "   2. Wait 3 minutes"
+            echo "   3. Re-run this workflow"
+            echo ""
+            echo "📚 For permanent solution, see README.md 'Remote State Backend' section"
           fi
           echo ""
