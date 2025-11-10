@@ -554,22 +554,46 @@ See [GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for complete setup instructions.
 
 **Cause**: Resource was created outside Terraform or state file is missing.
 
-**Solution**: The workflow now **automatically imports** existing resource groups. If you see this error:
+**Solution**: The workflow now **automatically imports** existing resource groups. However, if import fails:
+
+**Quick Fix (Recommended for initial setup):**
+```bash
+# Delete the resource group and all its contents
+az group delete --name rg-network --yes --no-wait
+
+# Wait 2-3 minutes for Azure to complete deletion
+# Verify it's gone:
+az group show --name rg-network
+# Should return: (ResourceGroupNotFound)
+
+# Then re-run the workflow
+```
+
+**Alternative Solutions:**
 
 1. **For local development:**
    ```bash
    cd terraform/00-iam
+   
+   # Import resource group
    terraform import azurerm_resource_group.iam /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/rg-network
+   
+   # Import managed identities (if they exist)
+   terraform import 'azurerm_user_assigned_identity.aks_env["dev"]' /subscriptions/<SUB_ID>/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-dev
+   # Repeat for stg, prd, sdx
+   
    terraform apply
    ```
 
-2. **For GitHub Actions:** Just re-run the workflow - it will import automatically.
+2. **For production (recommended):** Use remote state backend - see "Remote State Backend" section below.
 
-3. **To start fresh (destructive):**
+3. **Check what exists in Azure:**
    ```bash
-   # Delete the resource group (WARNING: deletes all resources inside)
+   # List all resources in the resource group
+   az resource list --resource-group rg-network --output table
+   
+   # If empty or only has managed identities from previous runs:
    az group delete --name rg-network --yes
-   # Then run terraform apply again
    ```
 
 ### Unable to access AKS cluster
