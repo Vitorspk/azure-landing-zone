@@ -63,6 +63,30 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           IMPORT_EXISTING: ${{ github.event.inputs.import_existing }}
         run: |
+          # Function to safely import a resource
+          safe_import() {
+            local resource_address=$1
+            local resource_id=$2
+            
+            # Check if resource is already in state
+            if terraform state show "$resource_address" &>/dev/null; then
+              echo "    ✓ Already in state"
+              return 0
+            fi
+            
+            # Try to import
+            if terraform import "$resource_address" "$resource_id" 2>&1 | grep -q "Successfully imported"; then
+              echo "    ✓ Imported successfully"
+              return 0
+            elif terraform state show "$resource_address" &>/dev/null; then
+              echo "    ✓ Now in state"
+              return 0
+            else
+              echo "    ⚠ Import failed (resource may not exist in Azure)"
+              return 0  # Don't fail the workflow
+            fi
+          }
+          
           # Function to import existing resources for a module
           import_existing_resources() {
             local module=$1
@@ -72,57 +96,57 @@ jobs:
               00-iam)
                 # Resource Group
                 if az group show --name rg-network &>/dev/null; then
-                  echo "  → Importing Resource Group: rg-network"
-                  terraform import azurerm_resource_group.iam /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network 2>/dev/null || echo "    (already in state)"
+                  echo "  → Resource Group: rg-network"
+                  safe_import "azurerm_resource_group.iam" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network"
                 fi
                 
-                # Managed Identities
+                # Managed Identities - Per Environment
                 for env in dev stg prd sdx; do
                   if az identity show --name mi-aks-$env --resource-group rg-network &>/dev/null; then
-                    echo "  → Importing Managed Identity: mi-aks-$env"
-                    terraform import "azurerm_user_assigned_identity.aks_env[\"$env\"]" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-$env 2>/dev/null || echo "    (already in state)"
+                    echo "  → Managed Identity: mi-aks-$env"
+                    safe_import "azurerm_user_assigned_identity.aks_env[\\\"$env\\\"]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-$env"
                   fi
                 done
                 
-                # Shared Identity (if exists)
+                # Shared Identity
                 if az identity show --name mi-aks-cluster-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → Importing Managed Identity: mi-aks-cluster-shared"
-                  terraform import 'azurerm_user_assigned_identity.aks[0]' /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-cluster-shared 2>/dev/null || echo "    (already in state)"
+                  echo "  → Managed Identity: mi-aks-cluster-shared"
+                  safe_import "azurerm_user_assigned_identity.aks[0]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ManagedIdentity/userAssignedIdentities/mi-aks-cluster-shared"
                 fi
                 ;;
                 
               01-networking)
                 # Virtual Network
                 if az network vnet show --name vnet-shared-network --resource-group rg-network &>/dev/null; then
-                  echo "  → Importing Virtual Network: vnet-shared-network"
-                  terraform import azurerm_virtual_network.shared /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network 2>/dev/null || echo "    (already in state)"
+                  echo "  → Virtual Network: vnet-shared-network"
+                  safe_import "azurerm_virtual_network.shared" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network"
                 fi
                 
                 # Subnets
                 for subnet_name in dev-subnet stg-subnet prd-subnet sdx-subnet; do
                   env=$(echo $subnet_name | cut -d'-' -f1)
                   if az network vnet subnet show --vnet-name vnet-shared-network --name $subnet_name --resource-group rg-network &>/dev/null; then
-                    echo "  → Importing Subnet: $subnet_name"
-                    terraform import "azurerm_subnet.subnets[\"$env\"]" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network/subnets/$subnet_name 2>/dev/null || echo "    (already in state)"
+                    echo "  → Subnet: $subnet_name"
+                    safe_import "azurerm_subnet.subnets[\\\"$env\\\"]" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet-shared-network/subnets/$subnet_name"
                   fi
                 done
                 
                 # NSG
                 if az network nsg show --name nsg-allow-ssh --resource-group rg-network &>/dev/null; then
-                  echo "  → Importing NSG: nsg-allow-ssh"
-                  terraform import azurerm_network_security_group.allow_ssh /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/networkSecurityGroups/nsg-allow-ssh 2>/dev/null || echo "    (already in state)"
+                  echo "  → NSG: nsg-allow-ssh"
+                  safe_import "azurerm_network_security_group.allow_ssh" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/networkSecurityGroups/nsg-allow-ssh"
                 fi
                 
                 # Public IP
                 if az network public-ip show --name pip-nat-gateway-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → Importing Public IP: pip-nat-gateway-shared"
-                  terraform import azurerm_public_ip.nat_gateway /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/publicIPAddresses/pip-nat-gateway-shared 2>/dev/null || echo "    (already in state)"
+                  echo "  → Public IP: pip-nat-gateway-shared"
+                  safe_import "azurerm_public_ip.nat_gateway" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/publicIPAddresses/pip-nat-gateway-shared"
                 fi
                 
                 # NAT Gateway
                 if az network nat gateway show --name nat-gateway-shared --resource-group rg-network &>/dev/null; then
-                  echo "  → Importing NAT Gateway: nat-gateway-shared"
-                  terraform import azurerm_nat_gateway.shared /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/natGateways/nat-gateway-shared 2>/dev/null || echo "    (already in state)"
+                  echo "  → NAT Gateway: nat-gateway-shared"
+                  safe_import "azurerm_nat_gateway.shared" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.Network/natGateways/nat-gateway-shared"
                 fi
                 ;;
                 
@@ -131,14 +155,14 @@ jobs:
                 for cluster_name in aks-dev aks-stg aks-prd aks-sdx; do
                   env=$(echo $cluster_name | cut -d'-' -f2)
                   if az aks show --name $cluster_name --resource-group rg-network &>/dev/null; then
-                    echo "  → Importing AKS Cluster: $cluster_name"
-                    terraform import "module.aks_clusters[\"$env\"].azurerm_kubernetes_cluster.aks" /subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ContainerService/managedClusters/$cluster_name 2>/dev/null || echo "    (already in state)"
+                    echo "  → AKS Cluster: $cluster_name"
+                    safe_import "module.aks_clusters[\\\"$env\\\"].azurerm_kubernetes_cluster.aks" "/subscriptions/$ARM_SUBSCRIPTION_ID/resourceGroups/rg-network/providers/Microsoft.ContainerService/managedClusters/$cluster_name"
                   fi
                 done
                 ;;
             esac
             
-            echo "✅ Import completed for module: $module"
+            echo "✅ Import process completed"
           }
           
           # Main deployment logic
@@ -153,9 +177,7 @@ jobs:
               
               # Import existing resources if enabled
               if [ "$IMPORT_EXISTING" == "true" ]; then
-                cd ../..
                 import_existing_resources $module
-                cd terraform/$module
               fi
               
               # Execute terraform command
@@ -250,6 +272,7 @@ jobs:
             echo "💡 Common issues:"
             echo "  - Check GITHUB_SECRETS.md for correct secrets configuration"
             echo "  - Ensure Service Principal has Owner role"
-            echo "  - Try enabling 'import_existing' option if resources already exist"
+            echo "  - If resources exist: Delete manually with 'az group delete --name rg-network'"
+            echo "  - Or use remote state backend to persist state between runs"
           fi
           echo ""
