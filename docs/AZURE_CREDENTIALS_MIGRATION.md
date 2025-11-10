@@ -109,8 +109,8 @@ Para rodar Terraform localmente, você precisa configurar as variáveis de ambie
 
 ```bash
 # Opção 1: Exportar variáveis de ambiente
-export ARM_SUBSCRIPTION_ID="35a5288e-6993-4afa-97a9-2862baaf944e"
-export ARM_TENANT_ID="58729694-7d24-4182-94ef-60f4c02329e3"
+export ARM_SUBSCRIPTION_ID="<seu-subscription-id>"
+export ARM_TENANT_ID="<seu-tenant-id>"
 export ARM_CLIENT_ID="your-client-id"
 export ARM_CLIENT_SECRET="your-client-secret"
 
