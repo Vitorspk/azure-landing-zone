@@ -23,7 +23,7 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = var.subscription_id
+  # subscription_id will be read from ARM_SUBSCRIPTION_ID environment variable
 }
 
 provider "azuread" {

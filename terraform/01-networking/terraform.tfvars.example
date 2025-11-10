@@ -1,5 +1,6 @@
-# Azure Subscription Configuration
-subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# Note: subscription_id is now read from ARM_SUBSCRIPTION_ID environment variable
+#       Set it via: export ARM_SUBSCRIPTION_ID="your-subscription-id"
+#       Or in GitHub Actions secrets as: AZURE_SUBSCRIPTION_ID
 
 # Resource Group (created in 00-iam module)
 resource_group_name = "rg-network"

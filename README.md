@@ -112,6 +112,32 @@ GitHub Actions → deploy-ingress-nginx
 - An active Azure subscription
 - Appropriate permissions to create resources
 
+### 🔑 Authentication Setup
+
+This project uses Azure environment variables for authentication. You no longer need to manually configure `subscription_id` in `.tfvars` files.
+
+**For GitHub Actions (CI/CD):**
+Configure these repository secrets:
+- `AZURE_SUBSCRIPTION_ID`
+- `AZURE_CLIENT_ID`
+- `AZURE_CLIENT_SECRET`
+- `AZURE_TENANT_ID`
+
+**For Local Development:**
+```bash
+# Option 1: Use Azure CLI (recommended)
+az login
+az account set --subscription "<your-subscription-id>"
+
+# Option 2: Set environment variables
+export ARM_SUBSCRIPTION_ID="your-subscription-id"
+export ARM_CLIENT_ID="your-client-id"
+export ARM_CLIENT_SECRET="your-client-secret"
+export ARM_TENANT_ID="your-tenant-id"
+```
+
+See [docs/AZURE_CREDENTIALS_MIGRATION.md](docs/AZURE_CREDENTIALS_MIGRATION.md) for detailed setup instructions.
+
 ### 1. Authenticate with Azure
 
 ```bash
@@ -399,6 +425,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed architecture diagrams and design decisions
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Step-by-step deployment and troubleshooting guide
 - **[GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md)**: CI/CD secrets configuration
+- **[AZURE_CREDENTIALS_MIGRATION.md](docs/AZURE_CREDENTIALS_MIGRATION.md)**: 🆕 Authentication setup guide
 - **[PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)**: Quick reference and overview
 
 Additional guides:

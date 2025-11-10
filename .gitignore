@@ -19,3 +19,5 @@ crash.log
 *.secret
 secrets/
 credentials/
+
+azure_credentials.json
