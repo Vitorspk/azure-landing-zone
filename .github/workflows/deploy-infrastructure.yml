@@ -69,9 +69,17 @@ jobs:
               if [ "$module" == "02-kubernetes" ]; then
                 # For kubernetes module, pass deploy_clusters variable
                 echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
-                terraform ${{ github.event.inputs.action }} -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+                  terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                else
+                  terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+                fi
               else
-                terraform ${{ github.event.inputs.action }}
+                if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+                  terraform apply -auto-approve
+                else
+                  terraform plan
+                fi
               fi
               
               cd ../..
@@ -87,9 +95,17 @@ jobs:
             if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
               # For kubernetes module, pass deploy_clusters variable
               echo "Clusters to deploy: ${{ github.event.inputs.clusters }}"
-              terraform ${{ github.event.inputs.action }} -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+              if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+                terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+              else
+                terraform plan -var="deploy_clusters=${{ github.event.inputs.clusters }}"
+              fi
             else
-              terraform ${{ github.event.inputs.action }}
+              if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+                terraform apply -auto-approve
+              else
+                terraform plan
+              fi
             fi
           fi
       
