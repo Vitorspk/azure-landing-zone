@@ -72,8 +72,8 @@ provider "azuread" {
 **Mudança:**
 ```hcl
 # ANTES
-subscription_id = "35a5288e-6993-4afa-97a9-2862baaf944e"
-tenant_id = "58729694-7d24-4182-94ef-60f4c02329e3"
+subscription_id = "<seu-subscription-id>"
+tenant_id = "<seu-tenant-id>"
 
 # DEPOIS
 # Note: Azure credentials are now read from environment variables:
