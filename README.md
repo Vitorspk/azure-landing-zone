@@ -110,18 +110,21 @@ GitHub Actions → deploy-ingress-nginx
 - Terraform >= 1.5.0
 - Azure CLI >= 2.50.0
 - An active Azure subscription
-- Appropriate permissions to create resources
+- **Service Principal with Owner role** (for GitHub Actions) or Owner permissions on your Azure account
+- Appropriate permissions to create resources and role assignments
 
 ### 🔑 Authentication Setup
 
 This project uses Azure environment variables for authentication. You no longer need to manually configure `subscription_id` in `.tfvars` files.
 
 **For GitHub Actions (CI/CD):**
-Configure these repository secrets:
+Configure these repository secrets (see [GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md)):
 - `AZURE_SUBSCRIPTION_ID`
 - `AZURE_CLIENT_ID`
 - `AZURE_CLIENT_SECRET`
 - `AZURE_TENANT_ID`
+
+⚠️ **Important**: The Service Principal must have **Owner** role to create IAM role assignments.
 
 **For Local Development:**
 ```bash
@@ -521,6 +524,29 @@ kubectl get pods --all-namespaces
 ```
 
 ## Troubleshooting
+
+### AuthorizationFailed: Cannot create role assignments
+
+**Error**: `The client does not have authorization to perform action 'Microsoft.Authorization/roleAssignments/write'`
+
+**Cause**: Service Principal lacks Owner or User Access Administrator role.
+
+**Solution**:
+```bash
+# Find your Service Principal
+az ad sp list --show-mine --query "[].{Name:displayName, AppId:appId}" -o table
+
+# Add Owner role
+az role assignment create \
+  --assignee "<APP_ID>" \
+  --role "Owner" \
+  --scope "/subscriptions/<SUBSCRIPTION_ID>"
+
+# Verify
+az role assignment list --assignee "<APP_ID>" --output table
+```
+
+See [GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for complete setup instructions.
 
 ### Unable to access AKS cluster
 
