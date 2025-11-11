@@ -19,7 +19,10 @@ echo "$EXISTING_CLUSTERS"
 echo ""
 
 # Get credentials for each existing cluster
-for cluster in $EXISTING_CLUSTERS; do
+while IFS= read -r cluster; do
+    # Skip empty lines that might result from command substitution
+    if [ -z "$cluster" ]; then continue; fi
+
     echo "Getting credentials for $cluster..."
     if az aks get-credentials \
         --resource-group "$RESOURCE_GROUP" \
@@ -29,7 +32,7 @@ for cluster in $EXISTING_CLUSTERS; do
     else
         echo "⚠️  Failed to get credentials for $cluster"
     fi
-done
+done <<< "$EXISTING_CLUSTERS"
 
 echo ""
 echo "✓ Kubeconfig updated successfully!"
