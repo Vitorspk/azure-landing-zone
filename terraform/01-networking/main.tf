@@ -1,27 +1,3 @@
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-  }
-
-  # Uncomment for remote state
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-terraform-state"
-  #   storage_account_name = "sttfstate"
-  #   container_name       = "tfstate"
-  #   key                  = "networking.tfstate"
-  # }
-}
-
-provider "azurerm" {
-  features {}
-  # subscription_id will be read from ARM_SUBSCRIPTION_ID environment variable
-}
-
 # Data source for IAM resource group
 data "azurerm_resource_group" "network" {
   name = var.resource_group_name
