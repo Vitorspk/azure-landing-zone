@@ -19,9 +19,9 @@ echo "════════════════════════�
 echo -e "${NC}"
 echo ""
 
-# Configuration (matching AWS/GCP pattern: vschiavo-home-terraform-state)
+# Configuration
 RESOURCE_GROUP="rg-terraform-state"
-STORAGE_ACCOUNT="vschiavotfstate"  # Must be globally unique, 3-24 chars, lowercase + numbers only
+STORAGE_ACCOUNT="vschiavotfstate"
 CONTAINER_NAME="tfstate"
 LOCATION="brazilsouth"
 
@@ -50,7 +50,7 @@ echo ""
 # Check if resource group exists
 echo -e "${BLUE}Step 1: Creating Resource Group${NC}"
 if az group exists --name "$RESOURCE_GROUP" 2>/dev/null | grep -q "true"; then
-    echo -e "${YELLOW}⚠️  Resource group '$RESOURCE_GROUP' already exists${NC}"
+    echo -e "${YELLOW}⚠️  Resource group already exists${NC}"
 else
     echo "Creating resource group..."
     az group create \
@@ -62,10 +62,10 @@ else
 fi
 echo ""
 
-# Check if storage account exists
+# Check if storage account exists  
 echo -e "${BLUE}Step 2: Creating Storage Account${NC}"
 if az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Storage account '$STORAGE_ACCOUNT' already exists${NC}"
+    echo -e "${YELLOW}⚠️  Storage account already exists${NC}"
 else
     echo "Creating storage account..."
     az storage account create \
@@ -83,7 +83,7 @@ else
 fi
 echo ""
 
-# Enable versioning for state file protection
+# Enable versioning
 echo -e "${BLUE}Step 3: Enabling Blob Versioning${NC}"
 az storage account blob-service-properties update \
     --account-name "$STORAGE_ACCOUNT" \
@@ -95,22 +95,18 @@ echo -e "${GREEN}✓ Blob versioning enabled${NC}"
 echo ""
 
 # Get storage account key
-echo -e "${BLUE}Step 4: Getting Storage Account Key${NC}"
 ACCOUNT_KEY=$(az storage account keys list \
     --resource-group "$RESOURCE_GROUP" \
     --account-name "$STORAGE_ACCOUNT" \
     --query '[0].value' -o tsv)
 
-echo -e "${GREEN}✓ Storage key retrieved${NC}"
-echo ""
-
 # Create container
-echo -e "${BLUE}Step 5: Creating Blob Container${NC}"
+echo -e "${BLUE}Step 4: Creating Blob Container${NC}"
 if az storage container show \
     --name "$CONTAINER_NAME" \
     --account-name "$STORAGE_ACCOUNT" \
     --account-key "$ACCOUNT_KEY" &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Container '$CONTAINER_NAME' already exists${NC}"
+    echo -e "${YELLOW}⚠️  Container already exists${NC}"
 else
     az storage container create \
         --name "$CONTAINER_NAME" \
@@ -123,69 +119,91 @@ fi
 echo ""
 
 # Verify setup
-echo -e "${BLUE}Step 6: Verifying Setup${NC}"
+echo -e "${BLUE}Step 5: Verifying Setup${NC}"
 echo ""
-echo "Resource Group:"
-az group show --name "$RESOURCE_GROUP" --query "{Name:name, Location:location, State:properties.provisioningState}" -o table
-
+az group show --name "$RESOURCE_GROUP" --query "{Name:name, Location:location}" -o table
 echo ""
-echo "Storage Account:"
-az storage account show \
-    --name "$STORAGE_ACCOUNT" \
-    --resource-group "$RESOURCE_GROUP" \
-    --query "{Name:name, Location:location, Sku:sku.name, Https:enableHttpsTrafficOnly, Versioning:'Enabled'}" -o table
-
-echo ""
-echo "Container:"
-az storage container show \
-    --name "$CONTAINER_NAME" \
-    --account-name "$STORAGE_ACCOUNT" \
-    --account-key "$ACCOUNT_KEY" \
-    --query "{Name:name, PublicAccess:properties.publicAccess}" -o table
+az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --query "{Name:name, Sku:sku.name}" -o table
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"
-echo -e "${GREEN}✅ Azure Storage Backend Setup Complete!${NC}"
+echo -e "${GREEN}✅ Azure Storage Backend Created!${NC}"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
-echo -e "${BOLD}Backend Configuration:${NC}"
-echo ""
-echo "terraform {"
-echo "  backend \"azurerm\" {"
-echo "    resource_group_name  = \"$RESOURCE_GROUP\""
-echo "    storage_account_name = \"$STORAGE_ACCOUNT\""
-echo "    container_name       = \"$CONTAINER_NAME\""
-echo "    key                  = \"azure-landing-zone/MODULE/terraform.tfstate\""
-echo "  }"
-echo "}"
+# ═══════════════════════════════════════════════════════════════
+# NEXT STEPS
+# ═══════════════════════════════════════════════════════════════
+
+echo -e "${BOLD}NEXT STEPS - Choose Migration Strategy:${NC}"
 echo ""
 
-echo -e "${YELLOW}This configuration is already in your backend.tf files!${NC}"
+echo -e "${BOLD}Option A: Start Fresh${NC} ${GREEN}(Recommended - Simplest)${NC}"
+echo "──────────────────────────────────────────────────────────────"
+echo "Best if: No critical resources or willing to redeploy"
+echo ""
+echo "1. Clean existing Azure resources:"
+echo -e "   ${GREEN}./scripts/cleanup-complete.sh${NC}"
+echo ""
+echo "2. Initialize modules with empty backend:"
+echo -e "   ${GREEN}cd terraform/00-iam && terraform init${NC}"
+echo -e "   ${GREEN}cd ../01-networking && terraform init${NC}"
+echo -e "   ${GREEN}cd ../02-kubernetes && terraform init${NC}"
+echo ""
+echo "3. Deploy via GitHub Actions (state will be saved remotely)"
 echo ""
 
-echo -e "${BOLD}Next Steps:${NC}"
+echo -e "${BOLD}Option B: Migrate Existing State${NC} ${YELLOW}(If you have resources)${NC}"
+echo "──────────────────────────────────────────────────────────────"
+echo "Best if: Have resources in Azure that must be preserved"
 echo ""
-echo "1. The backend.tf files have been created in each module"
-echo "2. You need to migrate existing state to remote backend:"
+echo "1. BACKUP current state files:"
+echo -e "   ${YELLOW}mkdir -p state-backup-\$(date +%Y%m%d)${NC}"
+echo -e "   ${YELLOW}cp terraform/*/terraform.tfstate* state-backup-\$(date +%Y%m%d)/${NC}"
 echo ""
-echo -e "${GREEN}cd terraform/00-iam${NC}"
-echo -e "${GREEN}terraform init -migrate-state${NC}"
+echo "2. Migrate each module:"
+echo -e "   ${GREEN}cd terraform/00-iam${NC}"
+echo -e "   ${GREEN}terraform init -migrate-state${NC}"
+echo -e "   ${YELLOW}   → Type 'yes' when prompted${NC}"
 echo ""
-echo -e "${GREEN}cd ../01-networking${NC}"
-echo -e "${GREEN}terraform init -migrate-state${NC}"
+echo -e "   ${GREEN}cd ../01-networking${NC}"
+echo -e "   ${GREEN}terraform init -migrate-state${NC}"
+echo -e "   ${YELLOW}   → Type 'yes' when prompted${NC}"
 echo ""
-echo -e "${GREEN}cd ../02-kubernetes${NC}"
-echo -e "${GREEN}terraform init -migrate-state${NC}"
+echo -e "   ${GREEN}cd ../02-kubernetes${NC}"
+echo -e "   ${GREEN}terraform init -migrate-state${NC}"
+echo -e "   ${YELLOW}   → Type 'yes' when prompted${NC}"
 echo ""
-echo "4. After migration, you can safely delete local .tfstate files"
+echo "3. Verify migration:"
+echo -e "   ${GREEN}terraform state list${NC} (in each module)"
+echo ""
+echo "4. Test plan to ensure state is correct:"
+echo -e "   ${GREEN}terraform plan${NC} (should show no changes)"
+echo ""
+echo "5. Delete local state files after verification:"
+echo -e "   ${GREEN}rm terraform/*/terraform.tfstate*${NC}"
 echo ""
 
-echo -e "${BLUE}Storage Account Details:${NC}"
-echo "  Name: $STORAGE_ACCOUNT"
+echo -e "${BOLD}Option C: Rollback${NC} ${RED}(If migration fails)${NC}"
+echo "──────────────────────────────────────────────────────────────"
+echo "1. Restore from backup:"
+echo -e "   ${GREEN}cp state-backup-*/terraform.tfstate terraform/00-iam/${NC}"
+echo ""
+echo "2. Remove backend config temporarily:"
+echo -e "   ${GREEN}mv terraform/00-iam/backend.tf terraform/00-iam/backend.tf.disabled${NC}"
+echo ""
+echo "3. Re-initialize with local backend:"
+echo -e "   ${GREEN}cd terraform/00-iam && terraform init${NC}"
+echo ""
+echo "4. Retry migration after fixing issues"
+echo ""
+
+echo "═══════════════════════════════════════════════════════════"
+echo -e "${BLUE}Storage Details:${NC}"
 echo "  Resource Group: $RESOURCE_GROUP"
+echo "  Storage Account: $STORAGE_ACCOUNT"
 echo "  Container: $CONTAINER_NAME"
 echo ""
-echo -e "${YELLOW}⚠️  Keep this storage account! It's critical for state management.${NC}"
-echo -e "${YELLOW}    Never delete rg-terraform-state resource group.${NC}"
+echo -e "${RED}⚠️  NEVER delete rg-terraform-state - it contains all state!${NC}"
+echo "═══════════════════════════════════════════════════════════"
 echo ""
