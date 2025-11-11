@@ -100,10 +100,10 @@ This architecture implements a complete Azure landing zone following best practi
 
 | Cluster   | Version | VM Size         | Nodes   | Private | Features              |
 |-----------|---------|-----------------|---------|---------|----------------------|
-| aks-dev   | 1.30    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
-| aks-stg   | 1.30    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
-| aks-prd   | 1.30    | Standard_D4s_v3 | 2-5     | Yes     | Multi-zone, Managed OS |
-| aks-sdx   | 1.30    | Standard_D2s_v3 | 1-2     | No      | Auto-scaling, Ephemeral OS |
+| aks-dev   | 1.31    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
+| aks-stg   | 1.31    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
+| aks-prd   | 1.31    | Standard_D4s_v3 | 2-5     | Yes     | Multi-zone, Managed OS |
+| aks-sdx   | 1.31    | Standard_D2s_v3 | 1-2     | No      | Auto-scaling, Ephemeral OS |
 
 #### Cluster Features
 - **Network Plugin**: Azure CNI for native VNet integration
@@ -307,10 +307,10 @@ All resources tagged with:
 - **Azure reserved**: First 4 IPs per subnet
 
 ### Service CIDRs (Kubernetes internal)
-- **DEV**: 10.0.0.0/16
-- **STG**: 10.1.0.0/16
-- **PRD**: 10.2.0.0/16
-- **SDX**: 10.3.0.0/16
+- **DEV**: 192.168.100.0/24 (DNS: 192.168.100.10)
+- **STG**: 192.168.101.0/24 (DNS: 192.168.101.10)
+- **PRD**: 192.168.102.0/24 (DNS: 192.168.102.10)
+- **SDX**: 192.168.103.0/24 (DNS: 192.168.103.10)
 
 **Note**: Service CIDRs do not overlap with VNet CIDR and are internal to each cluster.
 
