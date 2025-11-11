@@ -12,7 +12,7 @@ This landing zone provides a complete foundation for running containerized workl
 - **Selective cluster deployment**: Deploy only the clusters you need (dev, stg, prd, sdx, or any combination)
 - **Network security**: NSGs, NAT Gateway for egress traffic, and private cluster support for production
 - **Identity management**: Managed identities for AKS workloads with proper RBAC assignments
-- **Kubernetes-ready**: 4 AKS clusters (v1.30) with Azure CNI, network policies, and auto-scaling
+- **Kubernetes-ready**: 4 AKS clusters (v1.31) with Azure CNI, network policies, and auto-scaling
 - **GitOps-ready**: GitHub Actions workflows for automated validation and deployment with cluster selection
 - **Cost-optimized**: Estimated $90-650/month depending on which clusters you deploy
 
@@ -61,13 +61,10 @@ azure-landing-zone/
 │   ├── ARCHITECTURE.md     # Detailed architecture diagrams
 │   ├── DEPLOYMENT.md       # Step-by-step deployment guide
 │   ├── GITHUB_SECRETS.md   # CI/CD configuration
-│   ├── NETWORK-RANGE-FIX.md  # Network CIDR fix documentation
-│   ├── SELECTIVE-DEPLOYMENT.md  # Selective cluster deployment guide
-│   └── PROJECT_SUMMARY.md  # Quick reference
+│   └── INGRESS-NGINX-DEPLOYMENT.md  # Ingress deployment guide
 │
 ├── Makefile               # Automation commands
-├── QUICKSTART.md          # Fast deployment guide
-└── STRUCTURE.md           # Detailed structure reference
+└── README.md              # This file
 ```
 
 ## Quick Start
@@ -139,7 +136,7 @@ export ARM_CLIENT_SECRET="your-client-secret"
 export ARM_TENANT_ID="your-tenant-id"
 ```
 
-See [docs/AZURE_CREDENTIALS_MIGRATION.md](docs/AZURE_CREDENTIALS_MIGRATION.md) for detailed setup instructions.
+See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for detailed setup instructions.
 
 ### 1. Authenticate with Azure
 
@@ -262,10 +259,10 @@ Four AKS clusters with environment-specific configurations:
 
 | Cluster   | Version | VM Size         | Node Range | Private | Purpose                 |
 |-----------|---------|-----------------|------------|---------|-------------------------|
-| aks-dev   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
-| aks-stg   | 1.30    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
-| aks-prd   | 1.30    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
-| aks-sdx   | 1.30    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
+| aks-dev   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Development & testing   |
+| aks-stg   | 1.31    | Standard_D2s_v3 | 1-3        | No      | Staging & pre-prod      |
+| aks-prd   | 1.31    | Standard_D4s_v3 | 2-5        | Yes     | Production workloads    |
+| aks-sdx   | 1.31    | Standard_D2s_v3 | 1-2        | No      | Sandbox & experiments   |
 
 **Features**:
 - Azure CNI networking for native VNet integration
@@ -428,12 +425,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed architecture diagrams and design decisions
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Step-by-step deployment and troubleshooting guide
 - **[GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md)**: CI/CD secrets configuration
-- **[AZURE_CREDENTIALS_MIGRATION.md](docs/AZURE_CREDENTIALS_MIGRATION.md)**: 🆕 Authentication setup guide
-- **[PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)**: Quick reference and overview
-
-Additional guides:
-- **[QUICKSTART.md](QUICKSTART.md)**: Fast-track deployment guide
-- **[STRUCTURE.md](STRUCTURE.md)**: Detailed project structure reference
+- **[INGRESS-NGINX-DEPLOYMENT.md](docs/INGRESS-NGINX-DEPLOYMENT.md)**: Ingress NGINX deployment guide
 
 ## Security Best Practices
 
