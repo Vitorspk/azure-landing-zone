@@ -9,7 +9,7 @@ aks_clusters = {
   dev = {
     cluster_name       = "aks-dev"
     subnet_name        = "dev-subnet"
-    kubernetes_version = "1.30"
+    kubernetes_version = "1.31"
 
     default_node_pool = {
       name                = "system"
@@ -26,8 +26,8 @@ aks_clusters = {
 
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.0.0.10"
-    service_cidr   = "10.0.0.0/16"
+    dns_service_ip = "192.168.100.10"
+    service_cidr   = "192.168.100.0/24"
 
     private_cluster_enabled         = false
     api_server_authorized_ip_ranges = ["0.0.0.0/0"]
@@ -39,7 +39,7 @@ aks_clusters = {
   stg = {
     cluster_name       = "aks-stg"
     subnet_name        = "stg-subnet"
-    kubernetes_version = "1.30"
+    kubernetes_version = "1.31"
 
     default_node_pool = {
       name                = "system"
@@ -56,8 +56,8 @@ aks_clusters = {
 
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.1.0.10"
-    service_cidr   = "10.1.0.0/16"
+    dns_service_ip = "192.168.101.10"
+    service_cidr   = "192.168.101.0/24"
 
     private_cluster_enabled         = false
     api_server_authorized_ip_ranges = ["0.0.0.0/0"]
@@ -69,7 +69,7 @@ aks_clusters = {
   prd = {
     cluster_name       = "aks-prd"
     subnet_name        = "prd-subnet"
-    kubernetes_version = "1.30"
+    kubernetes_version = "1.31"
 
     default_node_pool = {
       name                = "system"
@@ -86,8 +86,8 @@ aks_clusters = {
 
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.2.0.10"
-    service_cidr   = "10.2.0.0/16"
+    dns_service_ip = "192.168.102.10"
+    service_cidr   = "192.168.102.0/24"
 
     private_cluster_enabled         = true
     api_server_authorized_ip_ranges = []
@@ -99,7 +99,7 @@ aks_clusters = {
   sdx = {
     cluster_name       = "aks-sdx"
     subnet_name        = "sdx-subnet"
-    kubernetes_version = "1.30"
+    kubernetes_version = "1.31"
 
     default_node_pool = {
       name                = "system"
@@ -116,8 +116,8 @@ aks_clusters = {
 
     network_plugin = "azure"
     network_policy = "azure"
-    dns_service_ip = "10.3.0.10"
-    service_cidr   = "10.3.0.0/16"
+    dns_service_ip = "192.168.103.10"
+    service_cidr   = "192.168.103.0/24"
 
     private_cluster_enabled         = false
     api_server_authorized_ip_ranges = ["0.0.0.0/0"]

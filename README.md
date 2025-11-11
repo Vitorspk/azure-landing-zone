@@ -425,12 +425,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Detailed architecture diagrams and design decisions
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Step-by-step deployment and troubleshooting guide
 - **[GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md)**: CI/CD secrets configuration
-- **[AZURE_CREDENTIALS_MIGRATION.md](docs/AZURE_CREDENTIALS_MIGRATION.md)**: 🆕 Authentication setup guide
-- **[PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)**: Quick reference and overview
-
-Additional guides:
-- **[QUICKSTART.md](QUICKSTART.md)**: Fast-track deployment guide
-- **[STRUCTURE.md](STRUCTURE.md)**: Detailed project structure reference
+- **[INGRESS-NGINX-DEPLOYMENT.md](docs/INGRESS-NGINX-DEPLOYMENT.md)**: Ingress NGINX deployment guide
 
 ## Security Best Practices
 
