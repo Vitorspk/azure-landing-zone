@@ -1,31 +1,3 @@
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 3.0"
-    }
-  }
-
-  # Uncomment for remote state
-  # backend "azurerm" {
-  #   resource_group_name  = "rg-terraform-state"
-  #   storage_account_name = "sttfstate"
-  #   container_name       = "tfstate"
-  #   key                  = "iam.tfstate"
-  # }
-}
-
-provider "azurerm" {
-  features {}
-  # subscription_id will be read from ARM_SUBSCRIPTION_ID environment variable
-}
-
-provider "azuread" {
-  # tenant_id will be read from ARM_TENANT_ID environment variable
-}
+# This file is intentionally minimal
+# All IAM resources are defined in service-principals.tf
+# This keeps the codebase organized and easy to maintain
