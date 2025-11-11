@@ -41,8 +41,8 @@ on:
         default: ''
 
 jobs:
-  deploy:
-    name: Deploy
+  terraform:
+    name: ${{ github.event.inputs.action == 'plan' && 'Plan' || github.event.inputs.action == 'apply' && 'Apply' || 'Destroy' }} - ${{ github.event.inputs.module }}
     runs-on: ubuntu-latest
     
     steps:
@@ -51,6 +51,37 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      - name: Set Job Title
+        id: job-title
+        run: |
+          ACTION="${{ github.event.inputs.action }}"
+          MODULE="${{ github.event.inputs.module }}"
+          CLUSTERS="${{ github.event.inputs.clusters }}"
+          
+          # Capitalize action
+          ACTION_DISPLAY=$(echo "$ACTION" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+          
+          # Format module display
+          case "$MODULE" in
+            "all")
+              MODULE_DISPLAY="All Modules"
+              ;;
+            "00-iam")
+              MODULE_DISPLAY="IAM"
+              ;;
+            "01-networking")
+              MODULE_DISPLAY="Networking"
+              ;;
+            "02-kubernetes")
+              MODULE_DISPLAY="Kubernetes"
+              if [ "$CLUSTERS" != "all" ]; then
+                MODULE_DISPLAY="Kubernetes ($CLUSTERS)"
+              fi
+              ;;
+          esac
+          
+          echo "title=$ACTION_DISPLAY - $MODULE_DISPLAY" >> $GITHUB_OUTPUT
 
       - name: Azure Login
         uses: azure/login@v2
@@ -121,7 +152,7 @@ jobs:
             echo ""
           fi
 
-      - name: Deploy Module
+      - name: ${{ github.event.inputs.action == 'plan' && '📋 Planning' || github.event.inputs.action == 'apply' && '🚀 Deploying' || '🗑️ Destroying' }} Infrastructure
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
