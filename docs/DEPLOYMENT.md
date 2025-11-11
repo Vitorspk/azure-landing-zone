@@ -647,7 +647,7 @@ Edit `terraform.tfvars` in `02-kubernetes`:
 aks_clusters = {
   dev = {
     # ... other config
-    kubernetes_version = "1.31"  # Current version
+    kubernetes_version = "1.31"  # Update to the desired version
   }
 }
 ```
