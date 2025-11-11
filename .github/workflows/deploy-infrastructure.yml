@@ -21,7 +21,7 @@ on:
           - 'apply'
           - 'destroy'
       clusters:
-        description: 'Which clusters to deploy (for kubernetes module only)'
+        description: 'Which clusters to deploy/destroy (for kubernetes module)'
         required: true
         default: 'all'
         type: choice
@@ -33,6 +33,7 @@ on:
           - 'sdx'
           - 'dev,stg'
           - 'dev,stg,prd'
+          - 'stg,prd,sdx'
       confirm_destroy:
         description: 'Type "DESTROY" to confirm destruction of resources'
         required: false
@@ -74,11 +75,50 @@ jobs:
               exit 1
             fi
             
-            # Extra warning for production
-            if [ "${{ github.event.inputs.clusters }}" == "prd" ] || [ "${{ github.event.inputs.clusters }}" == "all" ]; then
-              echo "⚠️  WARNING: You are about to destroy PRODUCTION resources!"
-              echo "This action is irreversible."
+            # Show what will be destroyed
+            echo ""
+            echo "⚠️  DESTROY CONFIRMATION"
+            echo "═══════════════════════════════════════"
+            
+            if [ "${{ github.event.inputs.module }}" == "all" ]; then
+              echo "You are about to destroy ALL infrastructure:"
+              echo "  ✗ 02-kubernetes (clusters: ${{ github.event.inputs.clusters }})"
+              echo "  ✗ 01-networking (VNet, NAT, NSG)"
+              echo "  ✗ 00-iam (Identities, Resource Group)"
+            elif [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
+              echo "You are about to destroy Kubernetes clusters:"
+              if [ "${{ github.event.inputs.clusters }}" == "all" ]; then
+                echo "  ✗ aks-dev"
+                echo "  ✗ aks-stg"
+                echo "  ✗ aks-prd"
+                echo "  ✗ aks-sdx"
+              else
+                IFS=',' read -ra CLUSTER_ARRAY <<< "${{ github.event.inputs.clusters }}"
+                for cluster in "${CLUSTER_ARRAY[@]}"; do
+                  echo "  ✗ aks-$cluster"
+                done
+              fi
+              echo ""
+              echo "Network and IAM will remain intact."
+            elif [ "${{ github.event.inputs.module }}" == "01-networking" ]; then
+              echo "You are about to destroy Networking:"
+              echo "  ✗ vnet-shared-network"
+              echo "  ✗ NAT Gateway"
+              echo "  ✗ Network Security Groups"
+              echo ""
+              echo "⚠️  WARNING: Ensure no AKS clusters exist before destroying network!"
+            elif [ "${{ github.event.inputs.module }}" == "00-iam" ]; then
+              echo "You are about to destroy IAM:"
+              echo "  ✗ Managed Identities (mi-aks-*)"
+              echo "  ✗ Resource Group (rg-network)"
+              echo ""
+              echo "⚠️  WARNING: Ensure network and clusters are destroyed first!"
             fi
+            
+            echo ""
+            echo "This action is IRREVERSIBLE."
+            echo "═══════════════════════════════════════"
+            echo ""
           fi
 
       - name: Deploy Module
@@ -92,8 +132,18 @@ jobs:
           
           # Main deployment logic
           if [ "${{ github.event.inputs.module }}" == "all" ]; then
-            # Deploy all modules sequentially
-            for module in 00-iam 01-networking 02-kubernetes; do
+            # For destroy, use reverse order to handle dependencies
+            if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+              MODULES="02-kubernetes 01-networking 00-iam"
+              echo "🗑️  Destroy mode: Modules will be destroyed in reverse order"
+            else
+              MODULES="00-iam 01-networking 02-kubernetes"
+              echo "🚀 Deploy mode: Modules will be deployed in correct order"
+            fi
+            echo ""
+            
+            # Deploy/Destroy all modules
+            for module in $MODULES; do
               echo "========================================"
               echo "Deploying module: $module"
               echo "========================================"
@@ -369,6 +419,19 @@ jobs:
               echo ""
               echo "Review the plan above. If OK:"
               echo "  Run workflow again with action: apply"
+            elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+              echo "✅ Destruction completed successfully!"
+              echo ""
+              echo "Resources have been removed from Azure."
+              echo ""
+              if [ "${{ github.event.inputs.module }}" == "all" ]; then
+                echo "All infrastructure modules destroyed:"
+                echo "  - 02-kubernetes (AKS clusters)"
+                echo "  - 01-networking (VNet, NAT, NSG)"
+                echo "  - 00-iam (Managed Identities, Resource Group)"
+              else
+                echo "Module destroyed: ${{ github.event.inputs.module }}"
+              fi
             else
               echo "✅ Infrastructure deployment completed successfully!"
               echo ""
