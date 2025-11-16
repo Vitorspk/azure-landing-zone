@@ -340,7 +340,8 @@ If you discover a security vulnerability, please:
 # Install git-filter-repo
 pip install git-filter-repo
 
-# Remove .tfstate files from history
+# Remove sensitive files from history
+git filter-repo --path '*.tfvars' --invert-paths
 git filter-repo --path '*.tfstate' --invert-paths
 git filter-repo --path '*.tfstate.backup' --invert-paths
 git filter-repo --path '.terraform/' --invert-paths
