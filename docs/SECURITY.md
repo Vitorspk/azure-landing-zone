@@ -217,7 +217,9 @@ Before running `terraform apply`, verify:
 
 2. **Clean Git history:**
    ```bash
+   git filter-repo --path '*.tfvars' --invert-paths
    git filter-repo --path '*.tfstate' --invert-paths
+   git filter-repo --path '*.tfstate.backup' --invert-paths
    git filter-repo --path '.terraform/' --invert-paths
    ```
 
