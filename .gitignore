@@ -1,27 +1,137 @@
-# Terraform
+# ==============================================================================
+# TERRAFORM
+# ==============================================================================
 .terraform/
 *.tfstate
 *.tfstate.*
-*.tfvars.backup
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+*.tfvars.json
+.terraform.lock.hcl
 crash.log
 crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+tfplan
+*.backup
 
-# Allow non-sensitive tfvars that are needed for GitHub Actions
-# These files should NOT contain secrets - use environment variables for credentials
-!terraform.tfvars
-!*.tfvars.example
-
-# Azure
+# ==============================================================================
+# CREDENTIALS & SECRETS
+# ==============================================================================
+*.pem
+*.key
+*.p12
+*.pfx
 .azure/
-
-# IDEs
-.idea/
-.vscode/
-.DS_Store
-
-# Secrets
+azure_credentials.json
 *.secret
 secrets/
 credentials/
+.env
+.env.local
+.env.*
+!.env.example
 
+# ==============================================================================
+# OPERATING SYSTEM
+# ==============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# ==============================================================================
+# IDE & EDITORS
+# ==============================================================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*.swn
+.*.sw[a-p]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ==============================================================================
+# LOGS & TEMPORARY FILES
+# ==============================================================================
+*.log
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# ==============================================================================
+# AZURE SPECIFIC
+# ==============================================================================
+# Azure Credentials (NEVER commit these!)
+.azure/
 azure_credentials.json
+azureauth.json
+
+# Terraform Backend Config
+backend-config.hcl
+
+# ==============================================================================
+# KUBERNETES
+# ==============================================================================
+kubeconfig
+*.kubeconfig
+.kube/
+
+# ==============================================================================
+# CI/CD
+# ==============================================================================
+.github/workflows/secrets/
+
+# ==============================================================================
+# CLAUDE
+# ==============================================================================
+.claude/
+
+# ==============================================================================
+# SECURITY NOTES
+# ==============================================================================
+# This .gitignore is designed to prevent accidental commits of:
+# 1. Terraform state files (use remote backend instead)
+# 2. Variable files with real values (use .tfvars.example as template)
+# 3. Azure credentials and secrets
+# 4. Environment-specific configuration
+# 5. IDE and OS-specific files
+#
+# CRITICAL: Never use !terraform.tfvars to allow commits
+# Always review files before committing with: git status
+# ==============================================================================
