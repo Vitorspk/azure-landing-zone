@@ -86,7 +86,7 @@ variable "aks_clusters" {
     dev = {
       cluster_name       = "aks-dev"
       subnet_name        = "dev-subnet"
-      kubernetes_version = "1.31"
+      kubernetes_version = "1.36"
 
       default_node_pool = {
         name                = "system"
@@ -116,7 +116,7 @@ variable "aks_clusters" {
     stg = {
       cluster_name       = "aks-stg"
       subnet_name        = "stg-subnet"
-      kubernetes_version = "1.31"
+      kubernetes_version = "1.36"
 
       default_node_pool = {
         name                = "system"
@@ -146,7 +146,7 @@ variable "aks_clusters" {
     prd = {
       cluster_name       = "aks-prd"
       subnet_name        = "prd-subnet"
-      kubernetes_version = "1.31"
+      kubernetes_version = "1.36"
 
       default_node_pool = {
         name                = "system"
@@ -176,7 +176,7 @@ variable "aks_clusters" {
     sdx = {
       cluster_name       = "aks-sdx"
       subnet_name        = "sdx-subnet"
-      kubernetes_version = "1.31"
+      kubernetes_version = "1.36"
 
       default_node_pool = {
         name                = "system"
