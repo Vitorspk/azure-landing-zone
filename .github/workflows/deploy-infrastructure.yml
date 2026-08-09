@@ -193,16 +193,17 @@ jobs:
                   ;;
                   
                 apply)
-                  # Attempt apply and capture output
+                  # Stream output live via tee so progress is visible while running;
+                  # still capture it in a file for the import-detection logic below.
+                  TF_APPLY_LOG=$(mktemp)
                   if [ "$module" == "02-kubernetes" ]; then
-                    APPLY_OUTPUT=$(terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1)
+                    terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1 | tee "$TF_APPLY_LOG"
                   else
-                    APPLY_OUTPUT=$(terraform apply -auto-approve 2>&1)
+                    terraform apply -auto-approve 2>&1 | tee "$TF_APPLY_LOG"
                   fi
-                  
-                  APPLY_EXIT=$?
-                  echo "$APPLY_OUTPUT"
-                  
+                  APPLY_EXIT=${PIPESTATUS[0]}
+                  APPLY_OUTPUT=$(cat "$TF_APPLY_LOG")
+
                   # Check if error is "already exists"
                   if [ $APPLY_EXIT -ne 0 ]; then
                     if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
@@ -322,16 +323,17 @@ jobs:
                 ;;
                 
               apply)
-                # Attempt apply and capture output
+                # Stream output live via tee so progress is visible while running;
+                # still capture it in a file for the import-detection logic below.
+                TF_APPLY_LOG=$(mktemp)
                 if [ "${{ github.event.inputs.module }}" == "02-kubernetes" ]; then
-                  APPLY_OUTPUT=$(terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1)
+                  terraform apply -auto-approve -var="deploy_clusters=${{ github.event.inputs.clusters }}" 2>&1 | tee "$TF_APPLY_LOG"
                 else
-                  APPLY_OUTPUT=$(terraform apply -auto-approve 2>&1)
+                  terraform apply -auto-approve 2>&1 | tee "$TF_APPLY_LOG"
                 fi
-                
-                APPLY_EXIT=$?
-                echo "$APPLY_OUTPUT"
-                
+                APPLY_EXIT=${PIPESTATUS[0]}
+                APPLY_OUTPUT=$(cat "$TF_APPLY_LOG")
+
                 # Check if error is "already exists"
                 if [ $APPLY_EXIT -ne 0 ]; then
                   if echo "$APPLY_OUTPUT" | grep -q "already exists.*needs to be imported"; then
