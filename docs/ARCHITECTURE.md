@@ -197,10 +197,10 @@ Deploys core infrastructure modules:
 - **Secrets required**: AZURE_CREDENTIALS, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID
 
 #### 2. terraform-validate.yml
-Validates Terraform code:
-- Runs on pull requests
-- Validates syntax and formatting
-- Performs security scanning
+Validates Terraform code on every push/PR touching `terraform/**`:
+- **Syntax & formatting checks** (blocking): `terraform fmt -check`, `terraform validate`
+- **Static analysis** (blocking): tflint for best-practice linting
+- **Security scanning** (report-only): checkov for infrastructure security issues
 
 ### Ingress NGINX Workflows
 
