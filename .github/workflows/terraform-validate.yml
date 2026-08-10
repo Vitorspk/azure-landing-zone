@@ -49,3 +49,18 @@ jobs:
       - name: Terraform Validate
         working-directory: terraform/${{ matrix.module }}
         run: terraform validate
+
+  security-scan:
+    name: Checkov Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        continue-on-error: true
+        with:
+          directory: terraform/
+          compact: true
+          quiet: true

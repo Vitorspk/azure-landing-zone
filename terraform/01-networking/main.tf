@@ -37,6 +37,7 @@ resource "azurerm_subnet" "subnets" {
 # ==========================================
 
 resource "azurerm_network_security_group" "allow_ssh" {
+  #checkov:skip=CKV_AZURE_160:HTTP (80) is intentionally open - this NSG fronts a public ingress controller that must accept plain-HTTP traffic, redirected to HTTPS at the ingress layer rather than blocked at the network layer. See docs/superpowers/specs/2026-08-09-terraform-best-practices-hardening-design.md.
   name                = var.nsg_name
   location            = data.azurerm_resource_group.network.location
   resource_group_name = data.azurerm_resource_group.network.name
