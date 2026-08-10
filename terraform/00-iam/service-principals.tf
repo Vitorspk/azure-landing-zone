@@ -40,6 +40,10 @@ resource "azuread_service_principal_password" "terraform" {
   count                = var.create_service_principal ? 1 : 0
   service_principal_id = azuread_service_principal.terraform[0].id
   end_date             = timeadd(timestamp(), "8760h") # 1 year
+
+  lifecycle {
+    ignore_changes = [end_date]
+  }
 }
 
 # Role Assignment: Network Contributor on Resource Group
