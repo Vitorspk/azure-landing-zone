@@ -43,6 +43,10 @@ env:
   AZURE_REGION: brazilsouth
   RESOURCE_GROUP: rg-network
 
+concurrency:
+  group: ingress-${{ github.event.inputs.clusters }}
+  cancel-in-progress: false
+
 jobs:
   deploy-ingress:
     name: Deploy Ingress NGINX
