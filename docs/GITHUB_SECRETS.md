@@ -341,11 +341,14 @@ Enable GitHub's secret scanning:
 
 ### 4. terraform-validate.yml
 
-**Purpose**: Validate Terraform code on pull requests
+**Purpose**: Validate Terraform code on every push/PR touching `terraform/**`:
+- **Syntax & formatting checks** (blocking): `terraform fmt -check`, `terraform validate`
+- **Static analysis** (blocking): tflint for best-practice linting
+- **Security scanning** (report-only): checkov for infrastructure security issues
 
 **Secrets used**: None (runs validation only, no deployment)
 
-**Trigger**: Automatic on pull requests
+**Trigger**: Automatic on pull requests and pushes to `main`/`master`
 
 ---
 

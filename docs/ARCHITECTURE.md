@@ -86,7 +86,7 @@ This architecture implements a complete Azure landing zone following best practi
 | SDX         | sdx-subnet  | 192.168.48.0/20 | ~4,094        |
 
 #### Security
-- **NSG**: nsg-allow-ssh (Ports 22, 80, 443)
+- **NSG**: nsg-allow-ssh (Ports 80, 443; name is historical — the SSH rule was removed)
 - **Service Endpoints**: Enabled for Storage, SQL, KeyVault, CosmosDB, EventHub
 
 #### Connectivity

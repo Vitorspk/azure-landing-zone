@@ -41,7 +41,7 @@ on:
         default: ''
 
 concurrency:
-  group: deploy-infrastructure-${{ github.event.inputs.module }}
+  group: deploy-infrastructure
   cancel-in-progress: false
 
 jobs:

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: ['00-iam', '01-networking', '02-kubernetes']
+        module: ['00-iam', '01-networking', '02-kubernetes', '02-kubernetes/modules/aks-cluster']
     
     steps:
       - name: Checkout
@@ -42,6 +42,8 @@ jobs:
 
       - name: TFLint
         working-directory: terraform/${{ matrix.module }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           tflint --init --config="${{ github.workspace }}/.tflint.hcl"
           tflint --config="${{ github.workspace }}/.tflint.hcl"

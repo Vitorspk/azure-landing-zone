@@ -44,7 +44,7 @@ env:
   RESOURCE_GROUP: rg-network
 
 concurrency:
-  group: ingress-${{ github.event.inputs.clusters }}
+  group: ingress
   cancel-in-progress: false
 
 jobs:
