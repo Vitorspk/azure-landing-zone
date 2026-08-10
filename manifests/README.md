@@ -708,4 +708,4 @@ Obrigatório para AKS funcionar corretamente.
 
 **Versão**: 1.13.3  
 **Última atualização**: 09/11/2025  
-**Testado em**: AKS 1.31
+**Testado em**: AKS 1.36

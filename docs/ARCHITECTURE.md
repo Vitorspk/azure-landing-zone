@@ -43,13 +43,13 @@ This architecture implements a complete Azure landing zone following best practi
 │  │                                                    │     │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐         │     │
 │  │  │ aks-dev  │  │ aks-stg  │  │ aks-prd  │         │     │
-│  │  │ (v1.30)  │  │ (v1.30)  │  │ (v1.30)  │         │     │
+│  │  │ (v1.36)  │  │ (v1.36)  │  │ (v1.36)  │         │     │
 │  │  │ Public   │  │ Public   │  │ Private  │         │     │
 │  │  └──────────┘  └──────────┘  └──────────┘         │     │
 │  │                                                    │     │
 │  │  ┌──────────┐                                      │     │
 │  │  │ aks-sdx  │                                      │     │
-│  │  │ (v1.30)  │                                      │     │
+│  │  │ (v1.36)  │                                      │     │
 │  │  │ Public   │                                      │     │
 │  │  └──────────┘                                      │     │
 │  └────────────────────────────────────────────────────┘     │
@@ -100,10 +100,10 @@ This architecture implements a complete Azure landing zone following best practi
 
 | Cluster   | Version | VM Size         | Nodes   | Private | Features              |
 |-----------|---------|-----------------|---------|---------|----------------------|
-| aks-dev   | 1.31    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
-| aks-stg   | 1.31    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
-| aks-prd   | 1.31    | Standard_D4s_v3 | 2-5     | Yes     | Multi-zone, Managed OS |
-| aks-sdx   | 1.31    | Standard_D2s_v3 | 1-2     | No      | Auto-scaling, Ephemeral OS |
+| aks-dev   | 1.36    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
+| aks-stg   | 1.36    | Standard_D2s_v3 | 1-3     | No      | Auto-scaling, Ephemeral OS |
+| aks-prd   | 1.36    | Standard_D4s_v3 | 2-5     | Yes     | Multi-zone, Managed OS |
+| aks-sdx   | 1.36    | Standard_D2s_v3 | 1-2     | No      | Auto-scaling, Ephemeral OS |
 
 #### Cluster Features
 - **Network Plugin**: Azure CNI for native VNet integration
@@ -197,10 +197,10 @@ Deploys core infrastructure modules:
 - **Secrets required**: AZURE_CREDENTIALS, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID
 
 #### 2. terraform-validate.yml
-Validates Terraform code:
-- Runs on pull requests
-- Validates syntax and formatting
-- Performs security scanning
+Validates Terraform code on every push/PR touching `terraform/**`:
+- **Syntax & formatting checks** (blocking): `terraform fmt -check`, `terraform validate`
+- **Static analysis** (blocking): tflint for best-practice linting
+- **Security scanning** (report-only): checkov for infrastructure security issues
 
 ### Ingress NGINX Workflows
 
