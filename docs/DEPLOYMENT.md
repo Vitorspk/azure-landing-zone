@@ -647,7 +647,7 @@ Edit `terraform.tfvars` in `02-kubernetes`:
 aks_clusters = {
   dev = {
     # ... other config
-    kubernetes_version = "1.31"  # Update to the desired version
+    kubernetes_version = "1.36"  # Update to the desired version
   }
 }
 ```
@@ -746,7 +746,7 @@ az storage container create \
 
 ### Enable Backend in Terraform
 
-Uncomment the backend configuration in each module's `main.tf`:
+The backend is already configured and active in each module's `backend.tf` (not `main.tf`), pointing at the `rg-terraform-state` resource group and `vschiavotfstate` storage account. You only need to edit it if you're pointing at a different storage account or subscription:
 
 ```hcl
 terraform {
