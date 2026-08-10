@@ -27,6 +27,11 @@ jobs:
         with:
           terraform_version: 1.5.0
 
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.64.0
+
       - name: Terraform Format Check
         working-directory: terraform/${{ matrix.module }}
         run: terraform fmt -check -recursive
@@ -34,6 +39,12 @@ jobs:
       - name: Terraform Init
         working-directory: terraform/${{ matrix.module }}
         run: terraform init -backend=false
+
+      - name: TFLint
+        working-directory: terraform/${{ matrix.module }}
+        run: |
+          tflint --init --config="${{ github.workspace }}/.tflint.hcl"
+          tflint --config="${{ github.workspace }}/.tflint.hcl"
 
       - name: Terraform Validate
         working-directory: terraform/${{ matrix.module }}
