@@ -216,7 +216,8 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default = {
-    Project   = "azure-landing-zone"
-    ManagedBy = "terraform"
+    Project     = "azure-landing-zone"
+    ManagedBy   = "terraform"
+    Environment = "shared"
   }
 }
