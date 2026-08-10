@@ -7,28 +7,28 @@ resource_group_name = "rg-network"
 
 # Virtual Network Configuration
 vnet_name          = "vnet-shared-network"
-vnet_address_space = "172.31.0.0/16"
+vnet_address_space = "192.168.0.0/16"
 
 # Subnet Configuration
 subnet_configs = {
   dev = {
     name              = "dev-subnet"
-    address_prefix    = "172.31.0.0/20"
+    address_prefix    = "192.168.0.0/20"
     service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
   }
   stg = {
     name              = "stg-subnet"
-    address_prefix    = "172.31.16.0/20"
+    address_prefix    = "192.168.16.0/20"
     service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault"]
   }
   prd = {
     name              = "prd-subnet"
-    address_prefix    = "172.31.32.0/20"
+    address_prefix    = "192.168.32.0/20"
     service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.AzureCosmosDB"]
   }
   sdx = {
     name              = "sdx-subnet"
-    address_prefix    = "172.31.48.0/20"
+    address_prefix    = "192.168.48.0/20"
     service_endpoints = ["Microsoft.Storage", "Microsoft.Sql", "Microsoft.KeyVault", "Microsoft.EventHub"]
   }
 }
