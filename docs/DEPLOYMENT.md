@@ -754,7 +754,7 @@ terraform {
     resource_group_name  = "rg-terraform-state"
     storage_account_name = "<your-storage-account-name>"
     container_name       = "tfstate"
-    key                  = "azure-landing-zone/iam/terraform.tfstate"  # Or: networking/terraform.tfstate, kubernetes/terraform.tfstate
+    key                  = "azure-landing-zone/iam/terraform.tfstate"  # Or: azure-landing-zone/networking/terraform.tfstate, azure-landing-zone/kubernetes/terraform.tfstate
   }
 }
 ```
