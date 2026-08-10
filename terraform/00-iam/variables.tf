@@ -10,12 +10,6 @@ variable "location" {
   default     = "brazilsouth"
 }
 
-variable "project_name" {
-  description = "Project name for resource naming"
-  type        = string
-  default     = "azure-landing-zone"
-}
-
 variable "environment" {
   description = "Environment name"
   type        = string

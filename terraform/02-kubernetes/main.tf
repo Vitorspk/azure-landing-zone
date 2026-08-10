@@ -3,11 +3,6 @@ data "azurerm_resource_group" "network" {
   name = var.resource_group_name
 }
 
-data "azurerm_virtual_network" "shared" {
-  name                = var.vnet_name
-  resource_group_name = var.resource_group_name
-}
-
 data "azurerm_subnet" "environments" {
   for_each = local.filtered_aks_clusters
 

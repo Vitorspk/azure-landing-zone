@@ -48,12 +48,22 @@ variable "network_plugin" {
   description = "Network plugin for AKS (azure or kubenet)"
   type        = string
   default     = "azure"
+
+  validation {
+    condition     = contains(["azure", "kubenet"], var.network_plugin)
+    error_message = "network_plugin must be either \"azure\" or \"kubenet\"."
+  }
 }
 
 variable "network_policy" {
-  description = "Network policy for AKS (azure or calico)"
+  description = "Network policy for AKS (azure, calico, or cilium)"
   type        = string
   default     = "azure"
+
+  validation {
+    condition     = contains(["azure", "calico", "cilium"], var.network_policy)
+    error_message = "network_policy must be \"azure\", \"calico\", or \"cilium\"."
+  }
 }
 
 variable "dns_service_ip" {

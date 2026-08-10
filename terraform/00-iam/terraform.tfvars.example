@@ -8,8 +8,6 @@
 resource_group_name = "rg-network"
 location            = "brazilsouth" # or "eastus"
 
-# Project Configuration
-project_name = "azure-landing-zone"
 environment  = "shared"
 
 # Identity Configuration

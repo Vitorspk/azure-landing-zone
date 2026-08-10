@@ -14,6 +14,11 @@ variable "vnet_address_space" {
   description = "Address space for the Virtual Network"
   type        = string
   default     = "192.168.0.0/16"
+
+  validation {
+    condition     = can(cidrhost(var.vnet_address_space, 0))
+    error_message = "vnet_address_space must be a valid CIDR block (e.g. \"192.168.0.0/16\")."
+  }
 }
 
 variable "subnet_configs" {

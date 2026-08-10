@@ -22,6 +22,13 @@ variable "deploy_clusters" {
   description = "Comma-separated list of clusters to deploy (dev,stg,prd,sdx) or 'all' for all clusters"
   type        = string
   default     = "all"
+
+  validation {
+    condition = var.deploy_clusters == "all" || alltrue([
+      for c in split(",", var.deploy_clusters) : contains(["dev", "stg", "prd", "sdx"], c)
+    ])
+    error_message = "deploy_clusters must be \"all\" or a comma-separated list containing only: dev, stg, prd, sdx."
+  }
 }
 
 locals {
@@ -209,7 +216,8 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
   default = {
-    Project   = "azure-landing-zone"
-    ManagedBy = "terraform"
+    Project     = "azure-landing-zone"
+    ManagedBy   = "terraform"
+    Environment = "shared"
   }
 }
