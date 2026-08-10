@@ -43,6 +43,10 @@ env:
   AZURE_REGION: brazilsouth
   RESOURCE_GROUP: rg-network
 
+concurrency:
+  group: ingress-${{ github.event.inputs.clusters }}
+  cancel-in-progress: false
+
 jobs:
   deploy-ingress:
     name: Deploy Ingress NGINX
@@ -60,7 +64,7 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
         with:
-          version: 'latest'
+          version: 'v1.36.3'
       
       - name: Parse clusters input
         id: parse_clusters

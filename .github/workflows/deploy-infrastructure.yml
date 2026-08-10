@@ -40,6 +40,10 @@ on:
         type: string
         default: ''
 
+concurrency:
+  group: deploy-infrastructure-${{ github.event.inputs.module }}
+  cancel-in-progress: false
+
 jobs:
   terraform:
     name: ${{ github.event.inputs.action == 'plan' && 'Plan' || github.event.inputs.action == 'apply' && 'Apply' || 'Destroy' }} - ${{ github.event.inputs.module }}
